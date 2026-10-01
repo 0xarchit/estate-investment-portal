@@ -1,126 +1,211 @@
 "use client";
-
-import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { getHoldings, type Holding } from "@/lib/api/portfolio";
 import { formatINR, formatPct } from "@/lib/format";
-import { Building2, ArrowRight } from "lucide-react";
-
-interface InvestmentItem {
-  propertyId: string;
-  property: {
-    title: string;
-    city: string;
-    image?: string;
-    status: string;
-    unitPrice: number;
-    expectedAppreciationPct?: number;
-  };
-  units: number;
-  ownershipPct: number;
-  invested: number;
-  estimatedValue: number;
-  payoutReceived: number;
-  roiPct: number;
-  status: string;
-}
-
-export default function PortfolioPage() {
-  const [items, setItems] = useState<InvestmentItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const token = localStorage.getItem("fre_token");
-    fetch("/api/v1/investments/me", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && data.data?.items) {
-          setItems(data.data.items);
+import { PageHeader } from "@/components/shared/PageHeader";
+import { StatCard } from "@/components/shared/StatCard";
+import { StatusChip } from "@/components/shared/StatusChip";
+import { ErrorState } from "@/components/shared/ErrorState";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { PageSkeleton } from "@/components/shared/PageSkeleton";
+import { DataTable, type Column } from "@/components/shared/DataTable";
+import { errorMessage } from "@/components/investor/common";
+const columns: Column<Holding>[] = [
+  {
+    key: "title",
+    header: "Property",
+    sortable: true,
+    render: (h) => (
+      <>
+        <Link
+          className="font-semibold hover:underline"
+          href={`/investor/portfolio/${h.propertyId}`}
+        >
+          {h.property.title}
+        </Link>
+        <p className="mt-1 text-xs text-slate-500">{h.property.city}</p>
+      </>
+    ),
+  },
+  { key: "units", header: "Units", sortable: true, align: "right" },
+  {
+    key: "ownershipPct",
+    header: "Ownership",
+    sortable: true,
+    align: "right",
+    render: (h) => formatPct(h.ownershipPct, 2),
+  },
+  {
+    key: "invested",
+    header: "Invested",
+    sortable: true,
+    align: "right",
+    render: (h) => formatINR(h.invested),
+  },
+  {
+    key: "estimatedValue",
+    header: "Est. value",
+    sortable: true,
+    align: "right",
+    render: (h) => formatINR(h.estimatedValue),
+  },
+  {
+    key: "status",
+    header: "Status",
+    render: (h) => <StatusChip status={h.property.status} />,
+  },
+  {
+    key: "payoutReceived",
+    header: "Payout",
+    sortable: true,
+    align: "right",
+    render: (h) => formatINR(h.payoutReceived),
+  },
+  {
+    key: "roiPct",
+    header: "ROI",
+    sortable: true,
+    align: "right",
+    render: (h) => (
+      <span
+        className={
+          h.roiPct > 0
+            ? "text-emerald-700"
+            : h.roiPct < 0
+              ? "text-red-600"
+              : "text-slate-600"
         }
-      })
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
+      >
+        {h.roiPct > 0 ? "+" : ""}
+        {formatPct(h.roiPct)}
+      </span>
+    ),
+  },
+];
+function sortValue(holding: Holding, key: string): number | string {
+  return key === "title"
+    ? holding.property.title
+    : Number(holding[key as keyof Holding]);
+}
+export default function Portfolio() {
+  const router = useRouter();
+  const holdings = useQuery({
+    queryKey: ["portfolio", "holdings"],
+    queryFn: getHoldings,
+  });
+  const [status, setStatus] = useState("ALL");
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<{ key: string; direction: "asc" | "desc" }>({
+    key: "estimatedValue",
+    direction: "desc",
+  });
+  if (holdings.isPending) return <PageSkeleton />;
+  if (holdings.isError)
     return (
-      <div className="flex items-center justify-center p-12">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-[#0F2A4A] border-t-transparent" />
-      </div>
+      <ErrorState
+        message={errorMessage(holdings.error)}
+        onRetry={() => holdings.refetch()}
+      />
     );
-  }
-
+  const all = holdings.data.items;
+  const invested = all
+    .filter((h) => h.status !== "REFUNDED")
+    .reduce((sum, h) => sum + h.invested, 0);
+  const value = all
+    .filter((h) => h.status !== "REFUNDED")
+    .reduce((sum, h) => sum + h.estimatedValue, 0);
+  const rows = all
+    .filter((h) => status === "ALL" || h.property.status === status)
+    .sort((a, b) => {
+      const first = sortValue(a, sort.key);
+      const second = sortValue(b, sort.key);
+      const comparison =
+        typeof first === "string"
+          ? first.localeCompare(String(second))
+          : first - Number(second);
+      return sort.direction === "asc" ? comparison : -comparison;
+    });
+  const totalPages = Math.max(1, Math.ceil(rows.length / 10));
+  const currentPage = Math.min(page, totalPages);
+  const roi = invested ? (value / invested - 1) * 100 : 0;
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-[#0F2A4A]">My Real Estate Portfolio</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Detailed breakdown of your co-ownership shares across all properties.
-        </p>
-      </div>
-
-      {items.length === 0 ? (
-        <div className="bg-white p-12 rounded-2xl border border-border text-center shadow-sm">
-          <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-[#0F2A4A]">No investments yet</h3>
-          <p className="text-sm text-muted-foreground mt-1 mb-6">
-            You do not currently own any property shares.
-          </p>
-          <Link
-            href="/properties"
-            className="px-5 py-2.5 bg-[#0F2A4A] text-white rounded-lg text-sm font-semibold hover:bg-[#0F2A4A]/90 transition-colors inline-flex items-center gap-2"
-          >
-            <span>Browse Properties</span>
-            <ArrowRight className="w-4 h-4" />
+    <div className="page-stack">
+      <PageHeader
+        title="Your portfolio"
+        subtitle="Every fraction. One clear picture."
+        actions={
+          <Link className="btn" href="/properties">
+            Find an investment ↗
           </Link>
-        </div>
+        }
+      />
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label="Total invested" value={formatINR(invested)} />
+        <StatCard label="Estimated value" value={formatINR(value)} />
+        <StatCard
+          label="Overall ROI"
+          value={`${roi > 0 ? "+" : ""}${formatPct(roi)}`}
+          tone={roi > 0 ? "success" : roi < 0 ? "danger" : undefined}
+          hint={
+            roi > 0
+              ? "Portfolio gain"
+              : roi < 0
+                ? "Portfolio loss"
+                : "No change in value"
+          }
+        />
+        <StatCard
+          label="Payouts received"
+          value={formatINR(all.reduce((sum, h) => sum + h.payoutReceived, 0))}
+        />
+      </div>
+      <div className="flex flex-wrap gap-2" aria-label="Filter holdings">
+        {["ALL", "LIVE", "FUNDED", "HOLDING", "SOLD"].map((item) => (
+          <button
+            key={item}
+            className={status === item ? "btn" : "btn-secondary"}
+            aria-pressed={status === item}
+            onClick={() => {
+              setStatus(item);
+              setPage(1);
+            }}
+          >
+            {item === "ALL"
+              ? "All holdings"
+              : item.charAt(0) + item.slice(1).toLowerCase()}
+          </button>
+        ))}
+      </div>
+      {!rows.length ? (
+        <EmptyState
+          title={all.length ? "No holdings in this stage" : "No holdings yet"}
+          description="Your property investments will live here."
+          action={
+            <Link className="btn" href="/properties">
+              Explore properties
+            </Link>
+          }
+        />
       ) : (
-        <div className="bg-white rounded-2xl border border-border overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs text-muted-foreground uppercase border-b border-border">
-                <tr>
-                  <th className="py-3.5 px-6">Property</th>
-                  <th className="py-3.5 px-6">Units</th>
-                  <th className="py-3.5 px-6">Ownership %</th>
-                  <th className="py-3.5 px-6">Invested Amount</th>
-                  <th className="py-3.5 px-6">Estimated Value</th>
-                  <th className="py-3.5 px-6">Payout Received</th>
-                  <th className="py-3.5 px-6">ROI</th>
-                  <th className="py-3.5 px-6">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {items.map((row) => (
-                  <tr key={row.propertyId} className="hover:bg-slate-50/50">
-                    <td className="py-4 px-6 font-semibold text-slate-900">
-                      <Link href={`/properties/${row.propertyId}`} className="hover:underline">
-                        {row.property?.title || "Property"}
-                      </Link>
-                      <span className="block text-xs text-muted-foreground font-normal">
-                        {row.property?.city}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 font-semibold text-slate-800">{row.units}</td>
-                    <td className="py-4 px-6 text-[#10B981] font-bold">{row.ownershipPct}%</td>
-                    <td className="py-4 px-6 font-semibold text-slate-900">{formatINR(row.invested)}</td>
-                    <td className="py-4 px-6 font-bold text-[#0F2A4A]">{formatINR(row.estimatedValue)}</td>
-                    <td className="py-4 px-6 text-slate-700">{formatINR(row.payoutReceived)}</td>
-                    <td className="py-4 px-6 font-bold text-[#10B981]">{formatPct(row.roiPct)}</td>
-                    <td className="py-4 px-6">
-                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase bg-slate-100 text-slate-700">
-                        {row.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <DataTable
+          columns={columns}
+          rows={rows.slice((currentPage - 1) * 10, currentPage * 10)}
+          page={currentPage}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          sort={sort}
+          onSortChange={(next) => {
+            setSort(next);
+            setPage(1);
+          }}
+          onRowClick={(row) =>
+            router.push(`/investor/portfolio/${row.propertyId}`)
+          }
+        />
       )}
     </div>
   );
 }
-

@@ -1,248 +1,328 @@
 "use client";
-
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { formatINR, formatCompactINR } from "@/lib/format";
-import { Building2, Search, MapPin, ArrowRight, ShieldCheck } from "lucide-react";
-
-interface PropertyItem {
-  _id: string;
-  title: string;
-  description: string;
-  type: string;
-  address: string;
-  city: string;
-  valuation: number;
-  totalUnits: number;
-  unitPrice: number;
-  unitsSold: number;
-  fundingPct: number;
-  remainingUnits: number;
-  status: string;
-  images: Array<{ url: string; name: string }>;
-}
-
-export default function MarketplacePage() {
-  const [properties, setProperties] = useState<PropertyItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [selectedType, setSelectedType] = useState("");
-  const [selectedCity, setSelectedCity] = useState("");
-
-  const fetchProperties = () => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (search) params.append("search", search);
-    if (selectedType) params.append("type", selectedType);
-    if (selectedCity) params.append("city", selectedCity);
-
-    fetch(`/api/v1/properties?${params.toString()}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && data.data?.items) {
-          setProperties(data.data.items);
-        }
-      })
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
-  };
-
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { Search, SlidersHorizontal, X, ArrowUpRight } from "lucide-react";
+import { PublicLayout } from "@/components/layout/PublicLayout";
+import { PropertyCard } from "@/components/property/PropertyCard";
+import {
+  PageSkeleton,
+  EmptyState,
+  ErrorState,
+  Pagination,
+} from "@/components/shared";
+import { Modal } from "@/components/shared/Modal";
+import { getProperties } from "@/lib/api/properties";
+const filterKeys = [
+  "city",
+  "type",
+  "status",
+  "minPrice",
+  "maxPrice",
+  "minFunding",
+  "maxFunding",
+];
+function Marketplace() {
+  const params = useSearchParams();
+  const router = useRouter();
+  const [search, setSearch] = useState(params.get("search") ?? "");
+  const [mobile, setMobile] = useState(false);
+  const serialized = params.toString();
+  function update(key: string, value: string) {
+    const next = new URLSearchParams(serialized);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    if (key !== "page") next.delete("page");
+    router.replace(`/properties${next.size ? "?" + next.toString() : ""}`, {
+      scroll: false,
+    });
+  }
   useEffect(() => {
-    fetchProperties();
-  }, [selectedType, selectedCity]);
-
-  return (
-    <div className="min-h-screen bg-[#F7F8FA] flex flex-col">
-      {/* Header */}
-      <header className="px-6 h-16 border-b border-border flex items-center justify-between bg-white sticky top-0 z-40">
-        <Link href="/" className="flex items-center gap-2 font-bold text-xl text-[#0F2A4A]">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#10B981] text-white">
-            <Building2 className="w-5 h-5" />
-          </div>
-          <span>EstatePortal</span>
-        </Link>
-        <div className="flex items-center gap-3">
-          <Link href="/login" className="px-4 py-2 text-sm font-medium border border-border rounded-lg hover:bg-muted/50 transition-colors">
-            Log in
-          </Link>
-          <Link href="/signup" className="px-4 py-2 text-sm font-medium bg-[#0F2A4A] text-white rounded-lg hover:bg-[#0F2A4A]/90 transition-colors">
-            Sign up
-          </Link>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-6 md:p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-extrabold text-[#0F2A4A]">Property Marketplace</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Browse legally verified, fractionalized real estate assets open for co-ownership.
-          </p>
-        </div>
-
-        {/* Filter Bar */}
-        <div className="bg-white p-4 rounded-xl border border-border shadow-sm flex flex-col md:flex-row gap-4 mb-8">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+    setSearch(params.get("search") ?? "");
+  }, [params]);
+  useEffect(() => {
+    if (search === (params.get("search") ?? "")) return;
+    const timer = setTimeout(() => update("search", search.trim()), 350);
+    return () => clearTimeout(timer);
+  }, [search, serialized]);
+  const rawPage = Number(params.get("page"));
+  const page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
+  const filters: Record<string, string | number> = { limit: 9, page };
+  for (const key of [...filterKeys, "search", "sort"]) {
+    const value = params.get(key);
+    if (value) filters[key] = value;
+  }
+  const query = useQuery({
+    queryKey: ["properties", filters],
+    queryFn: () => getProperties(filters),
+  });
+  const active = filterKeys.filter((k) => params.has(k));
+  const clear = () => {
+    setSearch("");
+    router.replace("/properties", { scroll: false });
+  };
+  const field = (label: string, key: string, choices: string[][]) => (
+    <label className="block text-xs font-semibold text-navy">
+      {label}
+      <select
+        className="field mt-2"
+        value={params.get(key) ?? ""}
+        onChange={(e) => update(key, e.target.value)}
+      >
+        <option value="">All {label.toLowerCase()}</option>
+        {choices.map(([value, text]) => (
+          <option key={value} value={value}>
+            {text}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+  const filterPanel = (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="font-semibold text-navy flex items-center gap-2">
+          <SlidersHorizontal size={17} /> Refine your search
+        </h2>
+        <button
+          className="text-xs text-emerald-700 font-semibold"
+          onClick={clear}
+        >
+          Reset
+        </button>
+      </div>
+      <label className="block text-xs font-semibold text-navy">
+        City
+        <input
+          className="field mt-2"
+          placeholder="e.g. Noida"
+          value={params.get("city") ?? ""}
+          onChange={(e) => update("city", e.target.value)}
+        />
+      </label>
+      {field("Property types", "type", [
+        ["APARTMENT", "Apartment"],
+        ["VILLA", "Villa"],
+        ["COMMERCIAL", "Commercial"],
+        ["PLOT", "Plot"],
+        ["WAREHOUSE", "Warehouse"],
+      ])}
+      {field("Funding statuses", "status", [
+        ["LIVE", "Open for investment"],
+        ["FUNDED", "Fully funded"],
+      ])}
+      <fieldset>
+        <legend className="text-xs font-semibold text-navy mb-2">
+          Price per unit (₹)
+        </legend>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            ["minPrice", "Minimum"],
+            ["maxPrice", "Maximum"],
+          ].map(([key, label]) => (
             <input
-              type="text"
-              placeholder="Search by property title or city..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && fetchProperties()}
-              className="w-full pl-9 pr-4 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2A4A]"
+              key={key}
+              className="field"
+              aria-label={`${label} price per unit in rupees`}
+              placeholder={label}
+              type="number"
+              min="0"
+              step="1"
+              value={params.has(key) ? Number(params.get(key)) / 100 : ""}
+              onChange={(e) =>
+                update(
+                  key,
+                  e.target.value
+                    ? String(Math.round(Number(e.target.value) * 100))
+                    : "",
+                )
+              }
             />
-          </div>
-
-          <div className="flex gap-3">
-            <select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-              className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2A4A]"
-            >
-              <option value="">All Types</option>
-              <option value="APARTMENT">Apartment</option>
-              <option value="COMMERCIAL">Commercial</option>
-              <option value="VILLA">Villa</option>
-              <option value="PLOT">Plot</option>
-              <option value="WAREHOUSE">Warehouse</option>
-            </select>
-
-            <select
-              value={selectedCity}
-              onChange={(e) => setSelectedCity(e.target.value)}
-              className="border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2A4A]"
-            >
-              <option value="">All Cities</option>
-              <option value="Noida">Noida</option>
-              <option value="Bengaluru">Bengaluru</option>
-              <option value="Gurugram">Gurugram</option>
-              <option value="Mumbai">Mumbai</option>
-              <option value="Hyderabad">Hyderabad</option>
-              <option value="Pune">Pune</option>
-            </select>
-
-            <button
-              onClick={fetchProperties}
-              className="px-4 py-2 bg-[#0F2A4A] text-white rounded-lg text-sm font-medium hover:bg-[#0F2A4A]/90 transition-colors"
-            >
-              Apply
-            </button>
-          </div>
+          ))}
         </div>
-
-        {/* Listings Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((n) => (
-              <div key={n} className="bg-white rounded-xl border border-border p-4 h-80 animate-pulse" />
-            ))}
-          </div>
-        ) : properties.length === 0 ? (
-          <div className="bg-white rounded-xl border border-border p-12 text-center">
-            <Building2 className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-[#0F2A4A]">No properties found</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Try adjusting your search criteria or clearing filters.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {properties.map((property) => {
-              const imgUrl =
-                property.images?.[0]?.url ||
-                `https://picsum.photos/seed/${property._id}/800/600`;
-
-              return (
-                <div
-                  key={property._id}
-                  className="bg-white rounded-xl border border-border overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col"
-                >
-                  {/* Thumbnail */}
-                  <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
-                    <img
-                      src={imgUrl}
-                      alt={property.title}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-3 left-3 bg-[#0F2A4A]/80 backdrop-blur text-white text-xs font-semibold px-2.5 py-1 rounded-full uppercase">
-                      {property.type}
-                    </div>
-                    <div className="absolute top-3 right-3">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                          property.status === "LIVE"
-                            ? "bg-[#10B981] text-white"
-                            : "bg-blue-600 text-white"
-                        }`}
-                      >
-                        {property.status}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Body */}
-                  <div className="p-5 flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-[#10B981]" />
-                        <span>{property.city}, {property.address}</span>
-                      </div>
-                      <h2 className="font-bold text-lg text-[#0F2A4A] line-clamp-1">
-                        {property.title}
-                      </h2>
-                    </div>
-
-                    <div className="my-4 pt-4 border-t border-border space-y-3">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Price / Unit</span>
-                        <span className="font-bold text-[#0F2A4A]">{formatINR(property.unitPrice)}</span>
-                      </div>
-
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Asset Valuation</span>
-                        <span className="font-semibold text-slate-700">{formatCompactINR(property.valuation)}</span>
-                      </div>
-
-                      {/* Funding Progress Bar */}
-                      <div>
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="font-medium text-slate-600">
-                            {property.fundingPct}% Funded
-                          </span>
-                          <span className="text-muted-foreground">
-                            {property.remainingUnits} units left
-                          </span>
-                        </div>
-                        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                          <div
-                            className="bg-[#10B981] h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${Math.min(100, property.fundingPct)}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <Link
-                      href={`/properties/${property._id}`}
-                      className="w-full py-2.5 bg-[#0F2A4A] hover:bg-[#0F2A4A]/90 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
-                    >
-                      <span>View & Invest</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </main>
-
-      {/* Academic Disclaimer Footer */}
-      <footer className="border-t border-border py-6 px-6 text-center text-xs text-muted-foreground bg-white">
-        <p>This is an academic project. No real money or securities are involved.</p>
-      </footer>
+      </fieldset>
+      <fieldset>
+        <legend className="text-xs font-semibold text-navy mb-2">
+          Funding progress (%)
+        </legend>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            ["minFunding", "From"],
+            ["maxFunding", "To"],
+          ].map(([key, label]) => (
+            <input
+              key={key}
+              className="field"
+              aria-label={`${label} funding percentage`}
+              placeholder={label}
+              type="number"
+              min="0"
+              max="100"
+              value={params.get(key) ?? ""}
+              onChange={(e) =>
+                update(
+                  key,
+                  e.target.value
+                    ? String(Math.min(100, Math.max(0, Number(e.target.value))))
+                    : "",
+                )
+              }
+            />
+          ))}
+        </div>
+      </fieldset>
+      <div className="border-t pt-5">
+        <p className="text-xs leading-6 text-muted-foreground">
+          Start with the numbers. Each listing shows its unit price, funding
+          progress, and expected holding period.
+        </p>
+      </div>
     </div>
   );
+  return (
+    <PublicLayout>
+      <div className="bg-white border-b">
+        <div className="site-width py-12 md:py-16">
+          <p className="eyebrow text-emerald-700 mb-4">The marketplace</p>
+          <h1 className="text-4xl md:text-5xl font-heading font-semibold tracking-tight text-navy">
+            Your next chapter.
+            <br className="sm:hidden" /> A real place.
+          </h1>
+          <p className="text-muted-foreground text-sm md:text-base mt-4 max-w-xl leading-7">
+            Explore properties. Compare the possibilities. Find an investment
+            that fits your plans.
+          </p>
+        </div>
+      </div>
+      <div className="site-width py-9">
+        <div className="flex flex-wrap gap-4 mb-8 items-center">
+          <div className="relative flex-1 min-w-48">
+            <Search
+              size={19}
+              className="absolute left-4 top-3.5 text-slate-500"
+            />
+            <input
+              className="field pl-12 bg-white"
+              aria-label="Search properties"
+              placeholder="Search properties or cities"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <button
+            className="btn btn-secondary lg:hidden"
+            onClick={() => setMobile(true)}
+          >
+            <SlidersHorizontal size={17} />
+            Filters{active.length ? ` (${active.length})` : ""}
+          </button>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            Sort by
+            <select
+              className="field w-auto"
+              value={params.get("sort") ?? "-createdAt"}
+              onChange={(e) => update("sort", e.target.value)}
+            >
+              <option value="-createdAt">Newest first</option>
+              <option value="unitPrice">Price: low to high</option>
+              <option value="-unitPrice">Price: high to low</option>
+              <option value="-fundingPct">Most funded</option>
+              <option value="fundingPct">Least funded</option>
+            </select>
+          </label>
+        </div>
+        <div className="grid lg:grid-cols-[248px_1fr] gap-8">
+          <aside className="hidden lg:block">
+            <div className="panel sticky top-24 p-5">{filterPanel}</div>
+          </aside>
+          <section className="min-w-0" aria-label="Property results">
+            <div className="flex flex-wrap gap-3 justify-between mb-5 items-center">
+              <p className="text-sm text-muted-foreground" aria-live="polite">
+                {query.isLoading
+                  ? "Finding your next opportunity…"
+                  : query.data
+                    ? `${query.data.total} ${query.data.total === 1 ? "property" : "properties"} to explore`
+                    : ""}
+              </p>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <ArrowUpRight size={14} /> Your share starts here
+              </p>
+            </div>
+            {active.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-5">
+                {active.map((key) => (
+                  <button
+                    key={key}
+                    className="inline-flex gap-2 items-center rounded-md border px-2 py-1.5 text-xs bg-white"
+                    onClick={() => update(key, "")}
+                  >
+                    {key.replace(/([A-Z])/g, " $1")}:{" "}
+                    {key.includes("Price")
+                      ? `₹${Number(params.get(key)) / 100}`
+                      : params.get(key)}
+                    <X size={13} />
+                    <span className="sr-only">Remove filter</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {query.isLoading ? (
+              <PageSkeleton />
+            ) : query.isError ? (
+              <ErrorState
+                message="We couldn’t load properties. Check your connection and try again."
+                onRetry={() => query.refetch()}
+              />
+            ) : !query.data?.items.length ? (
+              <EmptyState
+                title="No properties match"
+                description="Try another city, widen your price range, or clear your filters to see all opportunities."
+                action={
+                  <button className="btn" onClick={clear}>
+                    Clear filters
+                  </button>
+                }
+              />
+            ) : (
+              <>
+                <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                  {query.data.items.map((p) => (
+                    <PropertyCard key={p._id} property={p} />
+                  ))}
+                </div>
+                <Pagination
+                  page={page}
+                  totalPages={query.data.totalPages}
+                  onChange={(n) => update("page", String(n))}
+                />
+              </>
+            )}
+          </section>
+        </div>
+      </div>
+      <Modal
+        title="Filter properties"
+        open={mobile}
+        onClose={() => setMobile(false)}
+      >
+        {filterPanel}
+        <button className="btn w-full mt-6" onClick={() => setMobile(false)}>
+          Show properties
+        </button>
+      </Modal>
+    </PublicLayout>
+  );
 }
-
+export default function MarketplacePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="site-width py-12">
+          <PageSkeleton />
+        </div>
+      }
+    >
+      <Marketplace />
+    </Suspense>
+  );
+}

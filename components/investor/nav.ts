@@ -1,4 +1,11 @@
-import { LayoutDashboard, Store, Briefcase, Wallet, FileText, Bell } from "lucide-react";
+import {
+  LayoutDashboard,
+  Store,
+  Briefcase,
+  Wallet,
+  FileText,
+  Bell,
+} from "lucide-react";
 import { NavItem } from "@/components/layout/DashboardLayout";
 
 export const investorNav: NavItem[] = [
