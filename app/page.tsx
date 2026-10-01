@@ -1,4 +1,6 @@
 "use client";
+import type { CSSProperties } from "react";
+import { LandingMotion } from "@/components/landing/LandingMotion";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import {
@@ -75,26 +77,27 @@ export default function Home() {
   const hero = featured[0];
   return (
     <PublicLayout>
-      <section className="bg-navy text-white overflow-hidden">
-        <div className="site-width grid lg:grid-cols-[1.05fr_1fr] gap-12 py-16 md:py-24 items-center">
+      <LandingMotion>
+      <section className="landing-hero bg-navy text-white overflow-hidden">
+        <div className="landing-hero-grid site-width grid lg:grid-cols-[1.05fr_1fr] gap-12 items-center">
           <div>
-            <p className="eyebrow text-emerald-300 flex items-center gap-3">
+            <p className="landing-enter eyebrow text-emerald-300 flex items-center gap-3">
               <span className="w-7 h-px bg-emerald-300" /> A share in something
               real
             </p>
-            <h1 className="font-heading text-4xl md:text-6xl font-semibold tracking-tight leading-[1.12] mt-7 max-w-2xl">
+            <h1 style={{ "--reveal-delay": "80ms" } as CSSProperties} className="landing-enter font-heading text-4xl md:text-6xl font-semibold tracking-tight leading-[1.12] mt-7 max-w-2xl">
               Great properties.
               <br />
               Smaller entry.
               <br />
               <span className="text-emerald-300">Bigger possibilities.</span>
             </h1>
-            <p className="text-slate-300 text-base leading-7 mt-7 max-w-lg">
+            <p style={{ "--reveal-delay": "160ms" } as CSSProperties} className="landing-enter text-slate-300 text-base leading-7 mt-7 max-w-lg">
               Build your property portfolio, one share at a time. Explore
               fractional ownership with clear numbers and a view of the bigger
               picture.
             </p>
-            <div className="flex flex-wrap gap-3 mt-8">
+            <div style={{ "--reveal-delay": "240ms" } as CSSProperties} className="landing-enter flex flex-wrap gap-3 mt-8">
               <Link
                 href="/properties"
                 className="btn bg-white text-navy hover:bg-slate-100"
@@ -123,16 +126,16 @@ export default function Home() {
               </span>
             </div>
           </div>
-          <div className="relative lg:pl-8">
-            <div className="border border-white/20 rounded-t-[140px] rounded-b-xl p-3 pb-20 relative">
-              <div className="aspect-[4/3] overflow-hidden rounded-t-[130px] rounded-b-md">
+          <div style={{ "--reveal-delay": "160ms" } as CSSProperties} className="landing-enter landing-hero-art relative lg:pl-8">
+            <div className="landing-image-frame border border-white/20 rounded-t-[140px] rounded-b-xl p-3 relative">
+              <div className="landing-parallax aspect-[4/3] overflow-hidden rounded-t-[130px] rounded-b-md">
                 <PropertyImage
                   src={hero?.images?.[0]?.url}
                   alt={hero?.title ?? "Explore property ownership"}
                   className="min-h-0"
                 />
               </div>
-              <div className="absolute left-7 bottom-6 right-7 flex justify-between items-center gap-4">
+              <div className="flex justify-between items-center gap-4 px-3 pt-8 pb-3">
                 <div>
                   <p className="text-[10px] uppercase tracking-widest text-slate-300">
                     {hero ? "Featured opportunity" : "Built around your future"}
@@ -144,7 +147,7 @@ export default function Home() {
                 </div>
                 <Link
                   href={hero ? `/properties/${hero._id}` : "/properties"}
-                  className="w-11 h-11 flex shrink-0 items-center justify-center rounded-full border border-white/30"
+                  className="landing-arrow w-11 h-11 flex shrink-0 items-center justify-center rounded-full border border-white/30"
                   aria-label="Explore featured property"
                 >
                   <MoveUpRight size={19} />
@@ -152,7 +155,7 @@ export default function Home() {
               </div>
             </div>
             {hero && (
-              <div className="bg-white text-navy border border-slate-200 shadow-xl rounded-xl p-5 absolute -bottom-10 right-4 left-8 md:left-16">
+              <div className="landing-hero-stat bg-white text-navy border border-slate-200 shadow-xl rounded-xl p-5 mt-4 mx-3 md:mx-6">
                 <div className="flex justify-between gap-4 mb-4">
                   <div>
                     <p className="text-xs text-muted-foreground">
@@ -184,7 +187,7 @@ export default function Home() {
         id="how-it-works"
         className="site-width py-20 md:py-24 scroll-mt-20"
       >
-        <div className="md:flex justify-between items-end gap-10 mb-12">
+        <div data-reveal className="landing-section-head md:flex justify-between items-end gap-10 mb-10">
           <div>
             <p className="eyebrow text-emerald-700 mb-3">
               A clear path to ownership
@@ -202,9 +205,9 @@ export default function Home() {
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {steps.map((step, i) => (
-            <div key={step.title} className="border-t border-slate-300 pt-6">
+            <div data-reveal style={{ "--reveal-delay": `${i * 90}ms` } as CSSProperties} key={step.title} className="landing-step">
               <div className="flex justify-between items-start">
-                <step.icon size={28} strokeWidth={1.5} className="text-navy" />
+                <step.icon size={28} strokeWidth={1.5} className="landing-step-icon text-navy" />
                 <span className="font-heading text-sm text-slate-500">
                   0{i + 1}
                 </span>
@@ -219,9 +222,9 @@ export default function Home() {
           ))}
         </div>
       </section>
-      <section className="bg-white border-y py-16">
+      <section className="landing-opportunities border-y">
         <div className="site-width">
-          <div className="flex flex-wrap justify-between items-end gap-5 mb-9">
+          <div data-reveal className="landing-section-head flex flex-wrap justify-between items-end gap-5 mb-9">
             <div>
               <p className="eyebrow text-emerald-700 mb-3">
                 Open for investment
@@ -230,7 +233,7 @@ export default function Home() {
             </div>
             <Link
               href="/properties"
-              className="text-sm font-semibold text-navy flex items-center gap-2"
+              className="landing-arrow text-sm font-semibold text-navy flex items-center gap-2"
             >
               View marketplace <ArrowRight size={17} />
             </Link>
@@ -244,8 +247,8 @@ export default function Home() {
             />
           ) : featured.length ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featured.map((p) => (
-                <PropertyCard key={p._id} property={p} />
+              {featured.map((p, i) => (
+                <div data-reveal className="landing-property" style={{ "--reveal-delay": `${i * 100}ms` } as CSSProperties} key={p._id}><PropertyCard property={p} /></div>
               ))}
             </div>
           ) : (
@@ -261,8 +264,8 @@ export default function Home() {
           )}
         </div>
       </section>
-      <section className="site-width py-20 grid lg:grid-cols-[1fr_1.15fr] gap-12 md:gap-20">
-        <div>
+      <section className="landing-benefits site-width grid lg:grid-cols-[1fr_1.15fr] gap-12 md:gap-20">
+        <div data-reveal>
           <p className="eyebrow text-emerald-700 mb-3">A different way in</p>
           <h2 className="section-title">
             You don’t need to own it all
@@ -290,8 +293,8 @@ export default function Home() {
               "Follow investments, payouts, and wallet transactions with a clear record of your activity.",
             ],
           ].map(([title, text], i) => (
-            <div className="flex gap-5 border-b pb-6" key={title}>
-              <span className="text-gold-700 font-heading text-lg">
+            <div data-reveal style={{ "--reveal-delay": `${i * 90}ms` } as CSSProperties} className="flex gap-5 border-b pb-6" key={title}>
+              <span className="landing-benefit-number text-gold-700 font-heading text-lg">
                 0{i + 1}
               </span>
               <div>
@@ -305,15 +308,15 @@ export default function Home() {
         </div>
       </section>
       <section id="faq" className="site-width pb-20 scroll-mt-24">
-        <div className="text-center mb-10">
+        <div data-reveal className="text-center mb-10">
           <p className="eyebrow text-emerald-700 mb-3">
             Good questions. Clear answers.
           </p>
           <h2 className="section-title">Before you take the first step.</h2>
         </div>
         <div className="max-w-3xl mx-auto">
-          {faqs.map(([q, a]) => (
-            <details className="border-b py-5 group" key={q}>
+          {faqs.map(([q, a], i) => (
+            <details data-reveal style={{ "--reveal-delay": `${Math.min(i * 70, 210)}ms` } as CSSProperties} className="landing-faq border-b group" key={q}>
               <summary className="flex justify-between gap-4 cursor-pointer font-medium list-none text-navy">
                 {q}
                 <span
@@ -331,7 +334,7 @@ export default function Home() {
         </div>
       </section>
       <section className="site-width">
-        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-8 md:p-12 flex flex-wrap justify-between items-center gap-7">
+        <div data-reveal className="landing-final bg-emerald-50 border border-emerald-100 rounded-2xl p-8 md:p-12 flex flex-wrap justify-between items-center gap-7">
           <div>
             <p className="eyebrow text-emerald-800 mb-3">
               Your next chapter starts here
@@ -348,6 +351,7 @@ export default function Home() {
           </Link>
         </div>
       </section>
+      </LandingMotion>
     </PublicLayout>
   );
 }
