@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "../..",
+    "paths": {
+      "@/lib/server/models": ["docs/testing/p1-contract-double.ts"],
+      "@/lib/server/errors": ["docs/testing/p1-contract-double.ts"],
+      "@/lib/server/handler": ["docs/testing/p1-contract-double.ts"],
+      "@/lib/server/http": ["docs/testing/p1-contract-double.ts"],
+      "@/lib/server/services/ledger.service": ["docs/testing/p1-contract-double.ts"],
+      "@/lib/server/services/settings.service": ["docs/testing/p1-contract-double.ts"],
+      "@/lib/server/services/notification.service": ["docs/testing/p1-contract-double.ts"],
+      "@/lib/server/services/property.service": ["docs/testing/p1-contract-double.ts"],
+      "@/*": ["./*"]
+    },
+    "incremental": false
+  },
+  "include": ["../../app/api/**/*.ts", "../../lib/server/services/**/*.ts", "../../lib/validators/**/*.ts", "../../scripts/seed.ts", "./*.ts"]
+}

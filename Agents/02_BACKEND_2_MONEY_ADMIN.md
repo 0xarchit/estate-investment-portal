@@ -19,6 +19,9 @@ Models, `route()` handler, auth, ledger/settings/notification services, property
 
 ## TASKS (in order; commit after each)
 
+### Payment demo override
+Whenever this assignment refers to a Razorpay request, use a local demo adapter that automatically returns `true` (payment success). Do not send requests to Razorpay or use real payment credentials, even when keys are configured. Keep the existing order/verify API shapes, label responses `mock:true`, and return `paymentSuccess:true` after successful demo verification. Continue to validate the stored order, its owner, and the demo HMAC, and credit the wallet through `ledger.post` in the same Mongo transaction that marks the order PAID. Repeated verification must not credit the wallet twice.
+
 ### Task 1 — Pure payout calculator (T+0 → T+25, no dependencies)
 `payout.service.ts → computePayout({ salePrice, platformFeePct, totalUnits, holders })` — **pure, no DB, BigInt integer math**:
 ```
@@ -47,7 +50,7 @@ Vitest with the PS example: sale ₹1,40,00,000 (`1_400_000_000` paise), fee 2% 
 
 ### Task 3 — Wallet + ledger APIs (T+40 → T+70)
 - `GET /wallet` → `{ balance }` from the user doc (kept in sync by the ledger).
-- **Mock gateway (clearly labelled TEST MODE):** `POST /wallet/topup/order {amount}` — validate integer paise ≥ ₹100 and ≤ ₹10,00,000; create `orderId = 'order_' + uuid`; if real Razorpay keys exist you may call the Razorpay Orders API, otherwise return `{ orderId, amount, mock:true, mockPayment:{ paymentId:'pay_'+uuid, signature } }` where `signature = HMAC_SHA256(orderId + '|' + paymentId, MOCK_GATEWAY_SECRET)`. **Never keep orders in memory** (serverless instances don't share memory, so verify would randomly fail). Use the `GatewayOrder` model P1 provides (`{ orderId, userId, amount, status:'CREATED|PAID', paymentId }`). Verify must look the order up by `orderId` **and** `userId` and flip it to PAID atomically (`findOneAndUpdate({orderId, userId, status:'CREATED'}, {status:'PAID', paymentId})`; null → 409).
+- **Mock gateway (clearly labelled TEST MODE):** `POST /wallet/topup/order {amount}` — validate integer paise ≥ ₹100 and ≤ ₹10,00,000; create `orderId = 'order_' + uuid`; simulate the Razorpay request through the demo adapter above (always returns `true`) and return `{ orderId, amount, mock:true, mockPayment:{ paymentId:'pay_'+uuid, signature } }` where `signature = HMAC_SHA256(orderId + '|' + paymentId, MOCK_GATEWAY_SECRET)`. **Never keep orders in memory** (serverless instances don't share memory, so verify would randomly fail). Use the `GatewayOrder` model P1 provides (`{ orderId, userId, amount, status:'CREATED|PAID', paymentId }`). Verify must look the order up by `orderId` **and** `userId` and flip it to PAID atomically (`findOneAndUpdate({orderId, userId, status:'CREATED'}, {status:'PAID', paymentId})`; null → 409).
 - `POST /wallet/topup/verify {orderId, paymentId, signature}`: **verify HMAC with timing-safe compare**; reject bad signature `400`; reuse of a `gatewayPaymentId` → `409 DUPLICATE_PAYMENT` (unique sparse index on transactions + pre-check); on success `ledger.post({type:'TOPUP', direction:'CREDIT', gatewayPaymentId, refType:'Gateway'})` and return `{ balance }`. Credit amount comes from the stored order, **never** from the client body.
 - `POST /wallet/withdraw {amount, bankDetails}` (INVESTOR): amount ≤ balance, > 0 → `Withdrawal` PENDING (dummy bank details; validate shape). No ledger entry yet. `GET /wallet/withdrawals` own list.
 - `GET /transactions` (auth): own ledger, **admin sees all**; filters `type`, `from`, `to`, `direction`, `page`, `limit`, `sort=-createdAt`. Include `balanceAfter`, `refType/refId`.
