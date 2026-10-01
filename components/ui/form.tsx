@@ -62,7 +62,7 @@ export function FormControl({ children }: { children: React.ReactElement }) {
     "aria-describedby": field.error
       ? `${field.formDescriptionId} ${field.formMessageId}`
       : field.formDescriptionId,
-  });
+  } as React.HTMLAttributes<HTMLElement>);
 }
 export function FormDescription({
   className = "",
