@@ -273,7 +273,7 @@ export function MarketplaceBrowser({ basePath }: { basePath: string }) {
               <>
                 <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
                   {query.data.items.map((p) => (
-                    <PropertyCard key={p._id} property={p} />
+                    <PropertyCard key={p._id} property={p} basePath={basePath} />
                   ))}
                 </div>
                 <Pagination
