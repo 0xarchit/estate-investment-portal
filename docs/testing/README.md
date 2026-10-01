@@ -1,41 +1,64 @@
-# P2 checks
+# P2 verification
 
-## Current status
+The P1 foundation is integrated. Checks below exercise the current application modules; the older contract fixture is retained only as historical handoff support.
 
-The initial 14 unit checks passed using an isolated P1 contract double. Integration test source is provided but database integration has not yet been verified. The real P1 foundation is absent, so the full application build and live API acceptance checks remain pending.
-
-## Isolated checks while P1 is absent
+## Fast regression suite
 
 From the repository root:
 
 ```powershell
-node node_modules/vitest/vitest.mjs run --config docs/testing/vitest.config.ts
-node node_modules/typescript/bin/tsc --project docs/testing/tsconfig.json --noEmit
+npm test
+node node_modules/typescript/bin/tsc --noEmit --incremental false
+npm run build
 ```
 
-The isolated config aliases only the missing P1 dependencies to `p1-contract-double.ts`. The type-check config uses the same contract types. Neither configuration changes production module resolution. The default project build still needs real P1 files.
+The suite currently has 83 passing unit/route tests. The 16 database tests skip when `P2_TEST_MONGODB_URI` is absent. A skip is not database validation: run the dedicated configuration below separately.
 
-The unit suite covers the PS payout example, conservation of paise, deterministic rounding, losses, invalid holdings, safe-integer limits, demo signature validation, request validators, and portfolio estimates.
+Coverage includes integer payout conservation and rounding, demo HMAC verification, stored order limits, wallet overflow, read-only preview, broker serialization and string ledger references, per-purchase appreciation, empty-body validation, property transaction filtering, role selection, and safe login redirects. Service unit tests isolate database calls; they do not establish transactional correctness by themselves.
 
-## Database checks
+## Real database acceptance
 
-Create a disposable local MongoDB replica set and set `P2_TEST_MONGODB_URI` to its URI. Use a database dedicated to this suite: it clears application collections before every test. The suite rejects non-local hosts and skips automatically when no test URI is set.
+Use a disposable local MongoDB replica set. The suite deletes application collections before each test and resets demo data in its final test. It rejects hosts other than `localhost`/`127.0.0.1` and database names not starting with `p2_`.
 
 ```powershell
-$env:P2_TEST_MONGODB_URI = 'mongodb://127.0.0.1:27017/p2-isolated-tests?replicaSet=rs0'
-node node_modules/vitest/vitest.mjs run --config docs/testing/vitest.config.ts
+$env:P2_TEST_MONGODB_URI = 'mongodb://127.0.0.1:27017/p2_regression?replicaSet=rs0'
+node node_modules/vitest/vitest.mjs run --config docs/testing/real.config.ts
+Remove-Item Env:P2_TEST_MONGODB_URI
 ```
 
-Integration tests cover preview reads, sale/credit rollback, concurrent sales, purchase-level payout splitting, tiny payouts, top-up ownership/signature/replay/concurrency, withdrawal rechecks, empty portfolios, route role declarations, broker ownership, admin cross-demotions, KYC, and demo seed reconciliation.
+`real.config.ts` resolves `@/` to the repository and loads test URI/secrets before importing application configuration. No P1 contract aliases are used. Never point it at a shared or valuable database.
 
-These tests use real Mongo transactions with an explicit P1 test double. The double's JWT/ledger/handler behavior is test support, not a verification of the future P1 implementation. Repeat acceptance checks with the actual P1 modules after integration.
+Verified on 2026-10-01: all 16 tests passed using MongoDB 7.0.14 in a disposable local replica set with the actual P1 models, ledger, route wrapper, and services.
 
-## Seed
+| Area | Acceptance checks |
+|---|---|
+| Payout | Read-only preview; concurrent sales credit once; failed credits roll back; split purchases and tiny payouts conserve paise |
+| Wallet | Owner/signature checks; replay and concurrency; failed credit restores CREATED state for retry |
+| Withdrawals | Approval once; balance recheck; failed approval stays pending; rejection never debits |
+| Access | Investor/broker denied admin routes; inactive accounts denied; broker ownership enforced |
+| Administration | Self-demotion denied; concurrent cross-demotions retain an active admin; atomic KYC review and notification |
+| Reporting | Fresh portfolio zeros; 30-day chart; broker listings serialize correctly and include commission |
+| Seed | Eight properties, nine accounts, ten retail units remaining, one payout, all wallets reconcile |
 
-After P1 is available and `.env` points to a dedicated demo database:
+## Browser acceptance checklist
+
+Start the app against a dedicated seeded demo database, then use the credentials in the root README.
+
+1. Select Investor, Broker, and Admin in turn. Matching demo credentials must open the corresponding workspace.
+2. Choose Admin with investor credentials: show an inline role mismatch without granting an admin session.
+3. Submit an empty form: errors link to email/password fields; keyboard focus reaches role choices, inputs, password visibility, and submit.
+4. Open `/login?next=/investor/wallet` as an investor: retain the internal destination. External URLs and another role's workspace fall back to the authenticated role home.
+5. Check narrow and short viewports: login content, mobile navigation, sidebar, and notifications remain reachable by scrolling.
+6. With reduced motion enabled, smooth scrolling and entrance animations are disabled by the reduced-motion rules.
+
+## Seed reset
 
 ```powershell
 npm run seed -- --reset-demo
 ```
 
-The seed aborts without its reset flag and checks replica-set support before deleting data. It prints demo credentials and property statuses, then asserts that every wallet equals credits minus debits.
+Use a dedicated demo database configured through `.env`. The seed requires the explicit reset flag, initializes model indexes, and checks replica-set support before deleting collections. It prints demo credentials and asserts that every wallet equals ledger credits minus debits. All payments and bank details are simulated.
+
+## Legacy isolated configuration
+
+`vitest.config.ts`, `tsconfig.json`, and `p1-contract-double.ts` in this directory describe the pre-integration fixture. They are not the acceptance configuration for the integrated application. Application routes never import this fixture.
