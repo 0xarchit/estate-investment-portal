@@ -332,3 +332,23 @@
     padding-bottom: 24px;
   }
 }
+
+/* The original centered auth cards, with consistent login/signup polish. */
+.auth-polished { background-image: radial-gradient(ellipse at 15% 10%, rgba(16,185,129,.055), transparent 55%); }
+.auth-polished .auth-card { border-top: 3px solid #10b981; box-shadow: 0 16px 48px -28px rgba(15,42,74,.35); }
+.auth-polished h1 { color: #0f2a4a; letter-spacing: -.03em; }
+.auth-polished input:not([type="radio"]) { min-height: 48px; font-size: 16px; }
+.auth-polished input:disabled { opacity: .65; }
+.auth-polished button:focus-visible, .auth-polished a:focus-visible { outline: 2px solid #0f2a4a; outline-offset: 3px; }
+.signup-page .signup-submit { min-height: 48px; }
+.signup-page .signup-role { min-height: 108px; }
+@media (prefers-reduced-motion: no-preference) {
+  .auth-polished .auth-card { animation: surface-enter 400ms cubic-bezier(.22,1,.36,1) both; }
+  .auth-polished input { transition: border-color 180ms ease, box-shadow 180ms ease; }
+  .signup-role, .signup-submit svg { transition: transform 180ms ease, background-color 180ms ease; }
+  @media (hover: hover) {
+    .signup-page label:hover .signup-role { transform: translateY(-2px); }
+    .signup-submit:hover:not(:disabled) svg { transform: translateX(3px); }
+  }
+}
+@media (max-width: 480px) { .auth-polished { padding-block: 24px; } }
