@@ -9,6 +9,7 @@
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import { resolveLoginRedirect } from './login-redirect';
 
 type Role = 'ADMIN' | 'BROKER' | 'INVESTOR';
 
@@ -67,16 +68,16 @@ export function RoleGuard({ roles, children }: RoleGuardProps) {
  * Redirects already-logged-in users to their role home.
  * Wrap login/signup pages with this.
  */
-export function GuestOnly({ children }: { children: React.ReactNode }) {
+export function GuestOnly({ children, nextPath }: { children: React.ReactNode; nextPath?: string | null }) {
   const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
     if (user) {
-      router.replace(roleHome(user.role));
+      router.replace(resolveLoginRedirect(nextPath, user.role));
     }
-  }, [loading, user, router]);
+  }, [loading, user, router, nextPath]);
 
   if (loading) return <RoleGuardSkeleton />;
   if (user) return null;
