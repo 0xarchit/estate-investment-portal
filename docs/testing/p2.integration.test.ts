@@ -1,24 +1,29 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import { NextRequest } from 'next/server';
+import { env } from '@/lib/server/config/env';
 import { User, Property, Investment, Payout, Transaction, GatewayOrder, Settings, Withdrawal, Notification } from '@/lib/server/models';
 import { ledger } from '@/lib/server/services/ledger.service';
 import { executePayout, previewPayout } from '@/lib/server/services/payout.service';
 import { createTopupOrder, verifyTopup, requestWithdrawal, processWithdrawal } from '@/lib/server/services/wallet.service';
 import { getHoldings, getPortfolioSummary } from '@/lib/server/services/portfolio.service';
-import { getAdminStats, getFundingTimeline, updateUser, reviewKyc } from '@/lib/server/services/stats.service';
+import { getAdminStats, getFundingTimeline, getBrokerProperties, updateUser, reviewKyc } from '@/lib/server/services/stats.service';
 import { POST as sellRoute } from '@/app/api/v1/properties/[id]/sell/route';
 import { GET as adminStatsRoute } from '@/app/api/v1/admin/stats/route';
 import { seedDemo } from '@/scripts/seed';
 
 const uri = process.env.P2_TEST_MONGODB_URI;
 const suite = uri ? describe : describe.skip;
-suite('P2 integration against a disposable replica set and P1 contract double', () => {
+suite('P2 integration against a disposable replica set and actual P1 modules', () => {
   let adminId: string, brokerId: string, investorId: string, secondId: string, propertyId: string;
+  let passwordHash: string;
   beforeAll(async () => {
-    if (!new URL(uri!.replace(/^mongodb:/, 'http:')).hostname.match(/^(127\.0\.0\.1|localhost)$/)) throw new Error('Integration tests only accept a local disposable MongoDB URI');
-    process.env.MOCK_GATEWAY_SECRET = 'isolated-test-demo-hmac-secret';
-    process.env.JWT_SECRET = 'isolated-test-jwt-secret-at-least-32-characters';
+    const target = new URL(uri!.replace(/^mongodb:/, 'http:'));
+    if (!target.hostname.match(/^(127\.0\.0\.1|localhost)$/) || !target.pathname.startsWith('/p2_')) throw new Error('Use a local disposable database whose name begins with p2_');
+    if (env.MONGODB_URI !== uri) throw new Error('Use docs/testing/real.config.ts so the API handler connects only to the test database');
+    passwordHash = await bcrypt.hash('Test@123', 10);
     await mongoose.connect(uri!);
     for (const model of [User, Property, Investment, Payout, Transaction, GatewayOrder, Settings, Withdrawal, Notification]) await model.init();
   });
@@ -32,9 +37,9 @@ suite('P2 integration against a disposable replica set and P1 contract double', 
       { name: 'Broker', email: 'broker@test.example', role: 'BROKER' },
       { name: 'Aman', email: 'aman@test.example', role: 'INVESTOR' },
       { name: 'Priya', email: 'priya@test.example', role: 'INVESTOR' },
-    ]);
+    ].map((user, index) => ({ ...user, phone: `900000000${index}`, passwordHash })));
     [adminId, brokerId, investorId, secondId] = users.map(user => String(user._id));
-    const property = await Property.create({ title: 'Test property', city: 'Noida', status: 'HOLDING', brokerId, valuation: 10000, totalUnits: 100, unitsSold: 100, unitPrice: 100, images: [], expectedAppreciationPct: 8, holdingPeriodMonths: 12 });
+    const property = await Property.create({ title: 'Test property', description: 'Transaction test listing', type: 'APARTMENT', address: 'Test address', state: 'Uttar Pradesh', pincode: '201301', maxUnitsPerInvestor: 100, city: 'Noida', status: 'HOLDING', brokerId, valuation: 10000, totalUnits: 100, unitsSold: 100, unitPrice: 100, images: [], expectedAppreciationPct: 8, holdingPeriodMonths: 12 });
     propertyId = String(property._id);
     await Investment.create([{ investorId, propertyId, units: 20, amount: 2000, status: 'ACTIVE' }, { investorId: secondId, propertyId, units: 80, amount: 8000, status: 'ACTIVE' }]);
   });
@@ -125,16 +130,16 @@ suite('P2 integration against a disposable replica set and P1 contract double', 
     expect(await getPortfolioSummary(investorId)).toEqual({ totalInvested: 0, currentValue: 0, totalPayouts: 0, roiPct: 0, walletBalance: 0, allocation: [], recentTransactions: [] });
     expect((await getAdminStats()).charts.fundsRaisedOverTime).toHaveLength(30);
   });
-  it('declares admin-only route access and rejects other roles/inactive users via the contract wrapper', async () => {
+  it('enforces admin-only access and rejects inactive users through the real API wrapper', async () => {
     for (const id of [investorId, brokerId]) {
-      const token = jwt.sign({}, process.env.JWT_SECRET!, { subject: id });
-      const req = new Request('http://localhost/api/v1/admin/stats', { headers: { authorization: `Bearer ${token}` } });
+      const token = jwt.sign({ role: id === brokerId ? 'BROKER' : 'INVESTOR' }, env.JWT_SECRET, { subject: id });
+      const req = new NextRequest('http://localhost/api/v1/admin/stats', { headers: { authorization: `Bearer ${token}` } });
       expect((await adminStatsRoute(req)).status).toBe(403);
-      expect((await sellRoute(new Request(`http://localhost/api/v1/properties/${propertyId}/sell`, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ salePrice: 14000 }) }), { params: { id: propertyId } })).status).toBe(403);
+      expect((await sellRoute(new NextRequest(`http://localhost/api/v1/properties/${propertyId}/sell`, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ salePrice: 14000 }) }), { params: { id: propertyId } })).status).toBe(403);
     }
     await User.updateOne({ _id: adminId }, { $set: { isActive: false } });
-    const token = jwt.sign({}, process.env.JWT_SECRET!, { subject: adminId });
-    expect((await adminStatsRoute(new Request('http://localhost/api/v1/admin/stats', { headers: { authorization: `Bearer ${token}` } }))).status).toBe(401);
+    const token = jwt.sign({ role: 'ADMIN' }, env.JWT_SECRET, { subject: adminId });
+    expect((await adminStatsRoute(new NextRequest('http://localhost/api/v1/admin/stats', { headers: { authorization: `Bearer ${token}` } }))).status).toBe(401);
   });
   it('blocks broker ownership bypass and admin self-deactivation/demotion', async () => {
     await expect(getFundingTimeline(propertyId, investorId)).rejects.toMatchObject({ status: 404 });
@@ -142,7 +147,7 @@ suite('P2 integration against a disposable replica set and P1 contract double', 
     await expect(updateUser(adminId, adminId, { role: 'INVESTOR' })).rejects.toMatchObject({ status: 403 });
   });
   it('serializes concurrent admin cross-demotions to retain an active admin', async () => {
-    const other = await User.create({ name: 'Other admin', email: 'other@test.example', role: 'ADMIN' });
+    const other = await User.create({ name: 'Other admin', email: 'other@test.example', role: 'ADMIN', phone: '9000000010', passwordHash });
     const otherId = String(other._id);
     const results = await Promise.allSettled([updateUser(adminId, otherId, { role: 'INVESTOR' }), updateUser(otherId, adminId, { role: 'INVESTOR' })]);
     expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
@@ -154,6 +159,13 @@ suite('P2 integration against a disposable replica set and P1 contract double', 
     expect((await User.findById(investorId))?.kyc.status).toBe('APPROVED');
     expect(await Notification.countDocuments({ userId: investorId, type: 'KYC' })).toBe(1);
     await expect(reviewKyc(investorId, { action: 'APPROVE' })).rejects.toMatchObject({ status: 409 });
+  });
+  it('returns broker commission totals from actual string ledger references', async () => {
+    const session = await mongoose.startSession();
+    try { await session.withTransaction(async () => { await ledger.post({ userId: brokerId, amount: 100, direction: 'CREDIT', type: 'COMMISSION', refType: 'Property', refId: propertyId, session }); }); }
+    finally { await session.endSession(); }
+    const result = await getBrokerProperties(brokerId, {});
+    expect(JSON.parse(JSON.stringify(result)).items[0]).toMatchObject({ _id: propertyId, title: 'Test property', commissionEarned: 100, investorCount: 2 });
   });
   it('seeds eight properties, nine accounts, correct demo holdings and reconciled wallets', async () => {
     process.env.MONGODB_URI = uri;
