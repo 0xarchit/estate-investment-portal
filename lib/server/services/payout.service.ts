@@ -1,5 +1,6 @@
 import mongoose, { ClientSession } from 'mongoose';
-import { Property, Investment, Payout, User } from '@/lib/server/models';
+import { Property, Investment, Payout, User, Settings } from '@/lib/server/models';
+import { env } from '@/lib/server/config/env';
 import { ApiError } from '@/lib/server/errors';
 import { ledger } from '@/lib/server/services/ledger.service';
 import { getSettings } from '@/lib/server/services/settings.service';
@@ -55,7 +56,8 @@ export async function previewPayout(propertyId: string, salePrice: number) {
   if (!property) throw new ApiError(404, 'NOT_FOUND', 'Property not found');
   if (!['FUNDED', 'HOLDING'].includes(property.status)) throw new ApiError(409, 'INVALID_TRANSITION', 'Payout preview requires a FUNDED or HOLDING property');
   const holders = await loadHolders(propertyId);
-  const settings = await getSettings();
+  // getSettings() creates defaults on a fresh database. Preview is a read-only GET.
+  const settings = await Settings.findOne().lean() ?? { platformFeePct: env.PLATFORM_FEE_PCT };
   const computed = calculate({ salePrice, platformFeePct: settings.platformFeePct, totalUnits: property.totalUnits, holders });
   const users = await User.find({ _id: { $in: holders.map(holder => holder.investorId) } }).select('name');
   const names = new Map(users.map(user => [String(user._id), user.name]));
@@ -72,6 +74,9 @@ export async function executePayout(propertyId: string, salePrice: number, admin
   const session = await mongoose.startSession();
   try {
     return await session.withTransaction(async () => {
+      if (!await User.exists({ _id: adminId, role: 'ADMIN', isActive: true }).session(session)) {
+        throw new ApiError(403, 'FORBIDDEN', 'An active admin is required to execute a payout');
+      }
       if (await Payout.exists({ propertyId }).session(session)) throw new ApiError(409, 'ALREADY_SOLD', 'This property has already been sold');
       const property = await Property.findById(propertyId).session(session);
       if (!property) throw new ApiError(404, 'NOT_FOUND', 'Property not found');
@@ -101,7 +106,10 @@ export async function executePayout(propertyId: string, salePrice: number, admin
       return payout.toObject();
     });
   } catch (error) {
-    if (typeof error === 'object' && error && 'code' in error && error.code === 11000) throw new ApiError(409, 'ALREADY_SOLD', 'This property has already been sold');
+    if (typeof error === 'object' && error && 'code' in error && error.code === 11000 &&
+      'keyPattern' in error && error.keyPattern && typeof error.keyPattern === 'object' && 'propertyId' in error.keyPattern) {
+      throw new ApiError(409, 'ALREADY_SOLD', 'This property has already been sold');
+    }
     throw error;
   } finally { await session.endSession(); }
 }

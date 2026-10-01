@@ -93,21 +93,33 @@ export async function reviewKyc(userId: string, input: z.infer<typeof reviewSche
   } finally { await session.endSession(); }
 }
 export async function getBrokerProperties(brokerId: string, query: Record<string, string>) {
+  objectIdSchema.parse(brokerId);
   const { status, page, limit } = brokerQuerySchema.parse(query); const filter = { brokerId, ...(status ? { status } : {}) }; const { skip } = paginate({ page, limit });
   const [properties, total] = await Promise.all([Property.find(filter).sort({ createdAt: -1, _id: -1 }).skip(skip).limit(limit), Property.countDocuments(filter)]);
   const ids = properties.map(property => property._id);
-  const [counts, commissions] = await Promise.all([
+  const [counts, commissions, broker] = await Promise.all([
     Investment.aggregate<{ _id: mongoose.Types.ObjectId; count: number }>([{ $match: { propertyId: { $in: ids }, status: 'ACTIVE' } }, { $group: { _id: { propertyId: '$propertyId', investorId: '$investorId' } } }, { $group: { _id: '$_id.propertyId', count: { $sum: 1 } } }]),
-    Transaction.aggregate<{ _id: mongoose.Types.ObjectId; amount: number }>([{ $match: { userId: new mongoose.Types.ObjectId(brokerId), type: 'COMMISSION', direction: 'CREDIT', refType: 'Property', refId: { $in: ids } } }, { $group: { _id: '$refId', amount: { $sum: '$amount' } } }]),
+    // The ledger stores refId as a string; aggregation does not cast it for us.
+    Transaction.aggregate<{ _id: string; amount: number }>([{ $match: { userId: new mongoose.Types.ObjectId(brokerId), type: 'COMMISSION', direction: 'CREDIT', refType: 'Property', refId: { $in: ids.map(String) } } }, { $group: { _id: '$refId', amount: { $sum: '$amount' } } }]),
+    User.findById(brokerId).select('name'),
   ]);
-  return listResult(properties.map(property => serializeProperty(property, { investorCount: counts.find(row => String(row._id) === String(property._id))?.count ?? 0, commissionEarned: commissions.find(row => String(row._id) === String(property._id))?.amount ?? 0 })), total, page, limit);
+  const countsByProperty = new Map(counts.map(row => [String(row._id), row.count]));
+  const commissionByProperty = new Map(commissions.map(row => [String(row._id), row.amount]));
+  // P1's serializer is asynchronous. Returning promises serializes every item as {}.
+  const items = await Promise.all(properties.map(property => serializeProperty(property, {
+    investorCount: countsByProperty.get(String(property._id)) ?? 0,
+    commissionEarned: commissionByProperty.get(String(property._id)) ?? 0,
+    brokerName: broker?.name ?? 'Broker',
+  })));
+  return listResult(items, total, page, limit);
 }
 export async function getBrokerStats(brokerId: string) {
+  objectIdSchema.parse(brokerId);
   const [properties, commissionEarned] = await Promise.all([Property.find({ brokerId }), sum(Transaction, { userId: new mongoose.Types.ObjectId(brokerId), type: 'COMMISSION', direction: 'CREDIT' })]);
   return { listed: properties.length, live: properties.filter(property => property.status === 'LIVE').length, funded: properties.filter(property => ['FUNDED', 'HOLDING', 'SOLD'].includes(property.status)).length, totalRaised: properties.filter(property => property.status !== 'CANCELLED').reduce((total, property) => total + (property.unitsSold ?? 0) * (property.unitPrice ?? 0), 0), commissionEarned, pendingApprovals: properties.filter(property => property.status === 'PENDING_APPROVAL').length, fundingByProperty: properties.map(property => ({ title: property.title, fundingPct: property.totalUnits ? Math.round(property.unitsSold / property.totalUnits * 10000) / 100 : 0 })) };
 }
 export async function getFundingTimeline(propertyId: string, brokerId: string) {
-  objectIdSchema.parse(propertyId);
+  objectIdSchema.parse(propertyId); objectIdSchema.parse(brokerId);
   const property = await Property.findOne({ _id: propertyId, brokerId });
   if (!property) throw new ApiError(404, 'NOT_FOUND', 'Property not found');
   const rows = await Investment.aggregate<{ _id: string; units: number }>([{ $match: { propertyId: new mongoose.Types.ObjectId(propertyId) } }, { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt', timezone: 'UTC' } }, units: { $sum: '$units' } } }, { $sort: { _id: 1 } }]);

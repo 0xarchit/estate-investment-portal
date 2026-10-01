@@ -4,7 +4,7 @@ Academic fractional-property investment portal using Next.js App Router, TypeScr
 
 ## Implementation status
 
-P2's application code is implemented. **The application cannot currently build or run these APIs until P1's shared foundation is merged.** This checkout has placeholders for the P1 models, handler, auth, and ledger/settings/notification/property services. See [P1 integration requirements](docs/P1_INTEGRATION.md) for exact exports.
+The shared P1 foundation and team frontend are integrated. P2 provides ledger-backed demo payments, payouts, portfolio reporting, and admin/broker APIs. The latest integration pass corrects broker serialization, stored-order validation, preview side effects, purchase-date returns, and financial request validation.
 
 - [x] Integer payout calculator, preview, transactional sale, investor payouts, and platform fee credit.
 - [x] Demo top-up orders and verification, replay protection, wallet reads, and withdrawal approvals.
@@ -12,10 +12,12 @@ P2's application code is implemented. **The application cannot currently build o
 - [x] Admin statistics, users, settings, KYC, and withdrawals.
 - [x] Broker listing statistics, ownership-checked funding timeline, and notifications.
 - [x] Demo seed script with eight listings, nine accounts, ledger reconciliation, and sample sale.
-- [x] Unit and integration test source; isolated P1 contract support for development.
+- [x] Unit/route regressions and real replica-set acceptance tests.
 - [x] Integration with actual P1 implementation and full application build.
-- [x] Full API/database acceptance testing with the actual P1 foundation.
-- [x] Frontend implementation and deployment by their respective owners.
+- [x] P2 database acceptance tests against the actual P1 foundation (16 passing checks).
+- [x] Investor, broker, and admin frontend workspaces; explicit role selection at sign-in.
+- [x] Accessible login feedback, safe workspace redirects, subtle motion, and bounded scrolling.
+- [ ] Deployment and end-to-end verification in the deployed environment.
 
 ## Team ownership
 
@@ -46,7 +48,7 @@ flowchart LR
 
 ## Local setup
 
-Requires Node.js 20+ and MongoDB Atlas or a local replica set. Standalone MongoDB does not support the required multi-document transactions. Merge the P1 dependencies described above first.
+Requires Node.js 20+ and MongoDB Atlas or a local replica set. Standalone MongoDB does not support the required multi-document transactions.
 
 ```powershell
 npm ci
@@ -91,8 +93,20 @@ Withdrawals also simulate bank settlement. Approval debits the demo wallet, whil
 - [P2 file inventory and implementation status](docs/P2_IMPLEMENTATION.md)
 - [Testing instructions and limitations](docs/testing/README.md)
 
-Normal project checks after P1 lands: `npm test` and `npm run build`. Until then, isolated P2 checks can use the clearly marked contract double under `docs/testing`; those results do not establish correctness of P1's actual implementation.
+Run `npm test`, `node node_modules/typescript/bin/tsc --noEmit --incremental false`, and `npm run build`. The unit/route suite has 83 passing checks. Run the separate real database configuration for the 16 transaction acceptance checks; setup and the disposable-database restriction are documented in the testing guide.
 
-Portfolio appreciation is an illustrative compound estimate capped at the property's holding period. Refunded holdings are excluded from both invested principal and current value in summary ROI. Sold holdings use actual recorded payout amounts. Daily statistics use UTC calendar days. Pending withdrawal requests do not reserve funds; approval rechecks available balance.
+Portfolio appreciation is calculated separately for each purchase, starting at the later of its purchase date and the property funding date, and capped at the property's holding period. It is an illustrative estimate. Refunded holdings are excluded from both invested principal and current value in summary ROI. Sold holdings use actual recorded payout amounts. Daily statistics use UTC calendar days. Pending withdrawal requests do not reserve funds; approval rechecks available balance.
 
 This is an academic project. No real money or securities are involved.
+
+## Sign-in and navigation
+
+Choose **Investor**, **Broker**, or **Admin** before signing in. The selected role must match the account stored in the database; it never grants permissions. Demo credential buttons fill both the credentials and the matching role. Existing API clients may omit the optional role field.
+
+After sign-in, safe internal destinations are retained, while external URLs and another role's workspace fall back to the account's home. Keyboard users can use native role radios, associated field labels, inline errors, and the skip link. Menus and notification lists scroll within the viewport. Subtle entrance and control transitions respect reduced-motion preferences.
+
+## Contributing without conflicts
+
+Keep feature branches aligned with the current remote before starting work, and stage only files assigned to the feature. P2 backend corrections stay within its services, validators, and routes. The explicit sign-in and scrolling request additionally touches shared auth and layout files; coordinate those files with P3/P5 before merging. The architecture diagram above is unchanged.
+
+GitHub attributes commits through the commit author email. If a contribution is missing, check `git log --format="%h %an <%ae>"` and verify that email on your GitHub account before making further commits. Adding an old email can associate historical commits without rewriting team history. See [GitHub contribution troubleshooting](https://docs.github.com/en/account-and-profile/how-tos/contribution-settings/troubleshooting-missing-contributions).

@@ -8,15 +8,16 @@ interface Props {
   required?: boolean;
   children: React.ReactNode;
   hint?: string;
+  htmlFor?: string;
 }
 
 /**
  * Accessible form field wrapper: label + input slot + error message.
  */
-export function FormField({ label, error, required, children, hint }: Props) {
+export function FormField({ label, error, required, children, hint, htmlFor }: Props) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-sm font-medium text-[#111827]">
+      <label htmlFor={htmlFor} className="text-sm font-medium text-[#111827]">
         {label}
         {required && (
           <span className="ml-0.5 text-[#DC2626]" aria-hidden="true">
@@ -26,10 +27,10 @@ export function FormField({ label, error, required, children, hint }: Props) {
       </label>
       {children}
       {hint && !error && (
-        <p className="text-xs text-[#6B7280]">{hint}</p>
+        <p id={htmlFor ? `${htmlFor}-hint` : undefined} className="text-xs text-[#6B7280]">{hint}</p>
       )}
       {error && (
-        <p role="alert" className="text-xs text-[#DC2626]">
+        <p id={htmlFor ? `${htmlFor}-error` : undefined} role="alert" className="text-xs text-[#DC2626]">
           {error}
         </p>
       )}
@@ -41,10 +42,12 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: boolean;
 }
 
-export function Input({ error, className = '', ...props }: InputProps) {
+export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Input({ error, className = '', ...props }, ref) {
   return (
     <input
       {...props}
+      ref={ref}
+      aria-invalid={error || undefined}
       className={[
         'w-full rounded-lg border px-3 py-2.5 text-sm text-[#111827] outline-none',
         'placeholder:text-[#6B7280]',
@@ -57,4 +60,4 @@ export function Input({ error, className = '', ...props }: InputProps) {
       ].join(' ')}
     />
   );
-}
+});

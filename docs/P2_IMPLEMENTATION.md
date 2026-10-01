@@ -9,13 +9,13 @@
 - Seed script creating eight properties and nine accounts, matching ledger rows, broker commissions, a completed payout, pending KYC/withdrawal, and notifications.
 - README, complete shared API contract reference, dependency handoff, and test source.
 
-## Remaining integration work
+## Integrated verification and corrections
 
-P1's models, route wrapper, errors/HTTP helpers, and ledger/settings/notification/property services are absent in the current checkout. P2 imports their agreed contracts; the application is not runnable until those real dependencies arrive. See `P1_INTEGRATION.md` for exact requirements.
+P1 is present. The current P2 pass fixes async broker serialization and string commission references, read-only payout previews, active-actor and demo-order validation, wallet credit boundaries, per-purchase portfolio appreciation, missing JSON bodies, and property-filtered ledger history. Demo payment requests still automatically return true; ownership, HMAC, and replay checks remain enforced.
 
-After P1 is merged, reconcile exports/types, build the app, run the seed on a dedicated replica set, and run the API/database acceptance tests against P1. No P1-owned implementation files or frontend files were changed.
+Validation: 83 unit/route tests and 16 real MongoDB replica-set integration tests passed. Real tests use P1 modules rather than the historical fixture. See the testing guide for exact commands and limitations. Deployment remains separate.
 
-Validation completed so far: the initial 14 isolated unit tests passed; TypeScript passed against the P1 contract double. Database integration tests are written but not yet run. Test doubles are only used by the explicit isolated test configuration and are never loaded by application routes.
+The user also authorized Investor/Broker/Admin sign-in options, safe redirects, form accessibility, and shared motion/scroll improvements. These minimal auth/layout edits are an explicit extension of the original P2 ownership. The README diagram and other owners' feature pages remain unchanged.
 
 ## Modified existing files
 
@@ -74,3 +74,19 @@ All paths below are under `app/api/v1/`:
 - `docs/testing/tsconfig.json` — P2 type checks against the fixture contract.
 - `docs/testing/p2.integration.test.ts` — disposable replica-set acceptance tests.
 - `lib/server/services/__tests__/payout.test.ts` — payout, demo payment, validation, and projection unit tests.
+
+## Files added by this integration pass
+
+- `docs/testing/broker.test.ts` — async listing and commission regressions.
+- `docs/testing/payout-preview.test.ts` — preview without Settings writes.
+- `docs/testing/wallet-guards.test.ts` — order and credit boundary checks.
+- `docs/testing/portfolio.test.ts` — independent purchase dates and refunds.
+- `docs/testing/empty-bodies.test.ts` — real-wrapper request validation.
+- `docs/testing/transactions.test.ts` — property history with owner scoping.
+- `docs/testing/environment.ts` — explicit disposable test environment.
+- `docs/testing/real.config.ts` — integration with actual P1 modules.
+- `app/api/v1/auth/login/route.test.ts` — persisted role and credential checks.
+- `lib/auth/login-redirect.ts` — safe role-aware destinations.
+- `lib/auth/login-redirect.test.ts` — external, encoded, and cross-role redirect cases.
+
+Existing tests, P2 source, login/auth components, shared layout/CSS, and documentation are updated in place. No dependencies or generated artifacts are added.

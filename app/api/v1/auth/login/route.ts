@@ -29,6 +29,11 @@ export const POST = route<LoginInput>(
       throw new ApiError(401, "UNAUTHENTICATED", "Invalid email or password");
     }
 
+    // The selected role is a preference, never a source of permissions.
+    if (body.role && body.role !== user.role) {
+      throw new ApiError(403, "FORBIDDEN", "This account does not match the selected login role. Choose your account role and try again.");
+    }
+
     const token = signJwt({
       sub: user._id.toString(),
       role: user.role,
