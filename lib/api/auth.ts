@@ -59,6 +59,7 @@ export interface RegisterPayload {
 export interface LoginPayload {
   email: string;
   password: string;
+  role?: AuthUser['role'];
 }
 
 export async function registerApi(payload: RegisterPayload): Promise<{ user: AuthUser }> {

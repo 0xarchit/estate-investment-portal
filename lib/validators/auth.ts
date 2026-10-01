@@ -1,8 +1,9 @@
 import { z } from "zod";
 
 export const loginSchema = z.object({
-  email: z.string().email("Invalid email address").toLowerCase().trim(),
+  email: z.string().trim().email("Invalid email address").toLowerCase(),
   password: z.string().min(1, "Password is required"),
+  role: z.enum(["INVESTOR", "BROKER", "ADMIN"]).optional(),
 });
 
 export const registerSchema = z
