@@ -15,6 +15,10 @@
   <img src="https://img.shields.io/badge/License-MIT-D4A017" alt="MIT License" />
 </p>
 
+<p align="center">
+  <a href="https://estate.0xarchit.is-a.dev/"><strong>Live demo</strong></a>
+</p>
+
 EstatePortal is an academic demo of a fractional property-investment portal. Investors buy integer unit shares of listed properties, brokers list and track funding, and admins run due diligence and settlements. Every balance change flows through an auditable, ledger-backed demo wallet. All amounts are stored as integer paise.
 
 > Academic project. No real money or securities are involved.
