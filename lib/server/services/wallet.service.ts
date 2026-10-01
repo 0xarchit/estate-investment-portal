@@ -1,10 +1,11 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
-import mongoose, { ClientSession } from 'mongoose';
-import { GatewayOrder, Transaction, Withdrawal, User } from '@/lib/server/models';
+import mongoose, { ClientSession, FilterQuery } from 'mongoose';
+import { GatewayOrder, Transaction, Withdrawal, User, Investment, Payout } from '@/lib/server/models';
 import { ApiError } from '@/lib/server/errors';
 import { ledger } from '@/lib/server/services/ledger.service';
 import { notify } from '@/lib/server/services/notification.service';
-import { objectIdSchema, topupOrderSchema, topupVerifySchema, withdrawalSchema, TopupVerification, WithdrawalInput } from '@/lib/validators/wallet';
+import { objectIdSchema, topupOrderSchema, topupVerifySchema, withdrawalSchema, transactionQuerySchema, TopupVerification, WithdrawalInput } from '@/lib/validators/wallet';
+import { listResult, paginate } from '@/lib/server/http';
 import { reviewSchema } from '@/lib/validators/admin';
 
 /** The demo adapter represents a successful Razorpay request; it performs no network I/O. */
@@ -93,4 +94,32 @@ export async function processWithdrawal(id: string, adminId: string, input: { ac
       return updated.toObject();
     });
   } finally { await session.endSession(); }
+}
+
+/** Filter at the database so a property's older activity is not hidden behind unrelated pages. */
+export async function listTransactions(userId: string, role: 'ADMIN' | 'BROKER' | 'INVESTOR', query: Record<string, string>) {
+  objectIdSchema.parse(userId);
+  const { page, limit, type, direction, from, to, propertyId } = transactionQuerySchema.parse(query);
+  const filter: FilterQuery<unknown> = role === 'ADMIN' ? {} : { userId };
+  if (type) filter.type = type;
+  if (direction) filter.direction = direction;
+  if (from || to) filter.createdAt = { ...(from ? { $gte: new Date(from) } : {}), ...(to ? { $lte: new Date(to) } : {}) };
+  if (propertyId) {
+    const canonicalId = propertyId.toLowerCase();
+    const [payouts, purchases] = await Promise.all([
+      Payout.find({ propertyId: canonicalId }).select('_id'),
+      Investment.find({ propertyId: canonicalId, ...(role === 'ADMIN' ? {} : { investorId: userId }) }).select('_id'),
+    ]);
+    filter.$or = [
+      { refType: 'Property', refId: canonicalId },
+      { refType: 'Payout', refId: { $in: payouts.map(row => String(row._id)) } },
+      { refType: 'Investment', refId: { $in: purchases.map(row => String(row._id)) } },
+    ];
+  }
+  const { skip } = paginate({ page, limit });
+  const [items, total] = await Promise.all([
+    Transaction.find(filter).sort({ createdAt: -1, _id: -1 }).skip(skip).limit(limit),
+    Transaction.countDocuments(filter),
+  ]);
+  return listResult(items, total, page, limit);
 }

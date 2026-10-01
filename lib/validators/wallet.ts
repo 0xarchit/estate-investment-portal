@@ -19,6 +19,7 @@ export const paginationSchema = z.object({
 });
 export const objectIdSchema = z.string().regex(/^[a-f0-9]{24}$/i, 'Invalid identifier');
 export const transactionQuerySchema = paginationSchema.extend({
+  propertyId: objectIdSchema.optional(),
   type: z.enum(['TOPUP', 'INVESTMENT', 'PAYOUT', 'REFUND', 'COMMISSION', 'WITHDRAWAL', 'FEE']).optional(),
   direction: z.enum(['CREDIT', 'DEBIT']).optional(),
   from: z.string().datetime({ offset: true }).optional(),
