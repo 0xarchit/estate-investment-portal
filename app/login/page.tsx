@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -21,7 +21,7 @@ const DEMO_CREDENTIALS = [
   { role: 'Investor', email: 'aman@demo.com', password: 'Investor@123' },
 ];
 
-export default function LoginPage() {
+function LoginForm() {
   const { login } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -149,5 +149,15 @@ export default function LoginPage() {
         </p>
       </AuthCard>
     </GuestOnly>
+  );
+}
+
+
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50 text-sm text-gray-500">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

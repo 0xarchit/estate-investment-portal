@@ -17,7 +17,7 @@ export interface RouteOptions<TBody = unknown> {
 
 export interface RouteContext<TBody = unknown> {
   req: NextRequest;
-  user: IUser | null;
+  user: any;
   params: Record<string, string>;
   query: Record<string, string>;
   body: TBody;

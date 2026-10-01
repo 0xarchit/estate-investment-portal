@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { route } from '@/lib/server/handler';
 import { ok } from '@/lib/server/http';
 import { Settings } from '@/lib/server/models';
@@ -11,3 +12,4 @@ export const PATCH = route({ auth: true, roles: ['ADMIN'], schema: settingsSchem
   if (!settings) throw new ApiError(503, 'SETTINGS_NOT_READY', 'Initialize the singleton settings document first');
   return ok(settings, 'Settings updated');
 });
+

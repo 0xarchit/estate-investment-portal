@@ -1,3 +1,5 @@
+'use client';
+
 import { ReactNode } from 'react';
 import { adminNav } from '@/components/admin/nav';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';

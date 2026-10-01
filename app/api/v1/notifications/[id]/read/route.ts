@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { route } from '@/lib/server/handler';
 import { ok } from '@/lib/server/http';
 import { Notification } from '@/lib/server/models';
@@ -9,3 +10,4 @@ export const PATCH = route({ auth: true, roles: ['ADMIN', 'BROKER', 'INVESTOR'] 
   if (!notification) throw new ApiError(404, 'NOT_FOUND', 'Notification not found');
   return ok(notification);
 });
+

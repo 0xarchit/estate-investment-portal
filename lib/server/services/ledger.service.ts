@@ -14,7 +14,7 @@ export interface LedgerPostOptions {
   direction: TransactionDirection;
   amount: number; // positive integer paise
   refType?: string;
-  refId?: string;
+  refId?: string | Types.ObjectId | unknown;
   gatewayPaymentId?: string;
   note?: string;
   session?: ClientSession;
@@ -85,7 +85,7 @@ export const ledger = {
           amount,
           balanceAfter: updatedUser.walletBalance,
           refType,
-          refId,
+          refId: refId ? String(refId) : undefined,
           gatewayPaymentId,
           note,
         },

@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { FilterQuery, PipelineStage } from "mongoose";
 import { route } from "@/lib/server/handler";
 import { ok, paginate, listResult } from "@/lib/server/http";
@@ -244,3 +245,4 @@ export const POST = route<CreatePropertyInput>(
     return ok(serialized, "Property listing draft created successfully", 201);
   }
 );
+

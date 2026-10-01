@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { route } from "@/lib/server/handler";
 import { ok } from "@/lib/server/http";
 
@@ -12,3 +13,4 @@ export const GET = route(
     return ok({ user: userObj });
   }
 );
+

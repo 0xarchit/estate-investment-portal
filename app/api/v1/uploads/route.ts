@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { v2 as cloudinary } from "cloudinary";
 import { route } from "@/lib/server/handler";
 import { ApiError } from "@/lib/server/errors";
@@ -101,3 +102,4 @@ export const POST = route(
     );
   }
 );
+

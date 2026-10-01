@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fractional Real Estate Portal — Complete Flow</title>
+<script>
+(function(){try{var t=localStorage.getItem('fre-flow-theme');if(!t){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.classList.toggle('dark',t==='dark');}catch(e){}})();
+</script>
+<style>
+:root{
+  --bg:#F7F8FA; --surface:#FFFFFF; --text:#111827; --muted:#6B7280; --border:#E5E7EB;
+  --navy:#0F2A4A; --emerald:#10B981; --gold:#D4A017; --danger:#DC2626; --warning:#F59E0B;
+  --blue:#2563EB; --purple:#7C3AED; --slate:#64748B;
+  --node:#FFFFFF; --node-stroke:#0F2A4A; --edge:#94A3B8; --edge-active:#10B981;
+  --chip:#EEF2FF; --panel:#FFFFFF;
+}
+html.dark{
+  --bg:#0B1220; --surface:#111C33; --text:#E5E7EB; --muted:#9CA3AF; --border:#243352;
+  --node:#14213D; --node-stroke:#7DD3FC; --edge:#3B4A6B; --edge-active:#10B981;
+  --chip:#1A2542; --panel:#111C33;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+h1{font-size:18px;margin:0}
+.sub{font-size:12px;color:var(--muted);margin:2px 0 0}
+.flows{display:flex;flex-wrap:wrap;gap:8px}
+.flow-chip{border:1px solid var(--border);background:var(--chip);color:var(--text);border-radius:999px;padding:6px 12px;font-size:12px;cursor:pointer}
+.flow-chip.active{outline:2px solid var(--emerald)}
+#themeBtn{border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:8px;padding:6px 10px;cursor:pointer}
+main{display:grid;grid-template-columns:1fr 320px;gap:14px;padding:14px 18px;max-width:1400px;margin:0 auto}
+@media(max-width:1000px){main{grid-template-columns:1fr}}
+.stage{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:10px;overflow:auto}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;height:fit-content;position:sticky;top:76px}
+.panel h2{font-size:14px;margin:0 0 6px}
+.panel p,.panel li{font-size:13px;line-height:1.5}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;font-size:12px;color:var(--muted)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
+/* SVG theming — no hard-coded hex inside SVG */
+svg text{fill:var(--text);font-family:Inter,system-ui,sans-serif}
+.node rect{fill:var(--node);stroke:var(--node-stroke);stroke-width:1.4;rx:10}
+.node{cursor:pointer}
+.node text{font-size:12px;font-weight:600}
+.node .small{font-size:10px;font-weight:400;fill:var(--muted)}
+.node.active rect{stroke:var(--emerald);stroke-width:3}
+.node.dim{opacity:.35}
+.edge{stroke:var(--edge);stroke-width:2;fill:none}
+.edge.active{stroke:var(--edge-active);stroke-width:3;stroke-dasharray:8 6;animation:dash 1s linear infinite}
+.edge.dim{opacity:.25}
+@keyframes dash{to{stroke-dashoffset:-14}}
+.layer-label{font-size:11px;font-weight:700;fill:var(--muted);letter-spacing:.08em}
+.lifecycle{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:12px 0}
+.st{border-radius:999px;padding:5px 11px;font-size:12px;font-weight:700;border:1px solid var(--border);background:var(--surface)}
+.st small{font-weight:400;color:var(--muted)}
+.arrow{color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border)}
+code{background:var(--chip);padding:1px 6px;border-radius:6px;font-size:12px}
+.footer{font-size:11px;color:var(--muted);text-align:center;padding:14px}
+kbd{border:1px solid var(--border);border-radius:6px;padding:0 6px;font-size:11px}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Fractional Real Estate Investment Portal — Complete Flow</h1>
+    <p class="sub">Next.js App Router + Mongoose · paise integers · <code>ledger.post()</code> only writer · click nodes for details · pick a flow chip to animate</p>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <div class="flows" id="flows"></div>
+    <button id="themeBtn" title="Toggle theme">◐ Theme</button>
+  </div>
+</header>
+<main>
+  <div class="stage">
+    <div class="legend">
+      <span><i class="dot" style="background:#9CA3AF"></i>DRAFT</span>
+      <span><i class="dot" style="background:#F59E0B"></i>PENDING_APPROVAL</span>
+      <span><i class="dot" style="background:#2563EB"></i>LIVE</span>
+      <span><i class="dot" style="background:#10B981"></i>FUNDED</span>
+      <span><i class="dot" style="background:#7C3AED"></i>HOLDING</span>
+      <span><i class="dot" style="background:#0F2A4A"></i>SOLD</span>
+      <span><i class="dot" style="background:#DC2626"></i>REJECTED</span>
+      <span><i class="dot" style="background:#64748B"></i>CANCELLED</span>
+    </div>
+    <svg id="diagram" viewBox="0 0 1200 620" width="100%" height="620" role="img" aria-label="System architecture diagram">
+      <!-- layer labels -->
+      <text class="layer-label" x="20" y="30">CLIENTS (P3 kit · P5 auth · P4/P5 slices)</text>
+      <text class="layer-label" x="20" y="190">API · /api/v1 · route() auth/RBAC/zod/rateLimit</text>
+      <text class="layer-label" x="20" y="350">SERVICES (P1 core · P2 money)</text>
+      <text class="layer-label" x="20" y="500">DATA (Mongo/Mongoose · seed)</text>
+      <!-- clients -->
+      <g class="node" data-id="public"><rect x="20" y="45" width="210" height="58" rx="10"/><text x="32" y="68">Public site (P3)</text><text class="small" x="32" y="86">/ · /properties · /properties/[id]</text></g>
+      <g class="node" data-id="investor"><rect x="245" y="45" width="210" height="58" rx="10"/><text x="257" y="68">Investor app (P3)</text><text class="small" x="257" y="86">/investor/* · wallet · KYC</text></g>
+      <g class="node" data-id="brokerUI"><rect x="470" y="45" width="210" height="58" rx="10"/><text x="482" y="68">Broker app (P5)</text><text class="small" x="482" y="86">/broker/* · wizard · analytics</text></g>
+      <g class="node" data-id="adminUI"><rect x="695" y="45" width="210" height="58" rx="10"/><text x="707" y="68">Admin app (P4)</text><text class="small" x="707" y="86">/admin/* · sell + preview</text></g>
+      <g class="node" data-id="auth"><rect x="920" y="45" width="260" height="58" rx="10"/><text x="932" y="68">Auth (P5)</text><text class="small" x="932" y="86">AuthContext · RoleGuard · fre_token</text></g>
+      <!-- api -->
+      <g class="node" data-id="gateway"><rect x="20" y="205" width="210" height="58" rx="10"/><text x="32" y="228">route() gateway (P1)</text><text class="small" x="32" y="246">JWT · roles · sanitize · 429</text></g>
+      <g class="node" data-id="authAPI"><rect x="245" y="205" width="210" height="58" rx="10"/><text x="257" y="228">/auth · /uploads (P1)</text><text class="small" x="257" y="246">register login me</text></g>
+      <g class="node" data-id="propAPI"><rect x="470" y="205" width="210" height="58" rx="10"/><text x="482" y="228">/properties (P1)</text><text class="small" x="482" y="246">submit approve reject status</text></g>
+      <g class="node" data-id="investAPI"><rect x="695" y="205" width="210" height="58" rx="10"/><text x="707" y="228">POST /investments (P1)</text><text class="small" x="707" y="246">atomic · invest() engine</text></g>
+      <g class="node" data-id="moneyAPI"><rect x="920" y="205" width="260" height="58" rx="10"/><text x="932" y="228">Money APIs (P2)</text><text class="small" x="932" y="246">sell · wallet · portfolio · admin</text></g>
+      <!-- services -->
+      <g class="node" data-id="ledger"><rect x="20" y="365" width="210" height="58" rx="10"/><text x="32" y="388">ledger.post (P1)</text><text class="small" x="32" y="406">ONLY wallet writer · TX</text></g>
+      <g class="node" data-id="propSvc"><rect x="245" y="365" width="210" height="58" rx="10"/><text x="257" y="388">property.service (P1)</text><text class="small" x="257" y="406">assertTransition · serialize</text></g>
+      <g class="node" data-id="investSvc"><rect x="470" y="365" width="210" height="58" rx="10"/><text x="482" y="388">investment.service (P1)</text><text class="small" x="482" y="406">withTransaction · no oversell</text></g>
+      <g class="node" data-id="payoutSvc"><rect x="695" y="365" width="210" height="58" rx="10"/><text x="707" y="388">payout.service (P2)</text><text class="small" x="707" y="406">BigInt · remainder→largest</text></g>
+      <g class="node" data-id="walletSvc"><rect x="920" y="365" width="260" height="58" rx="10"/><text x="932" y="388">wallet · portfolio · stats</text><text class="small" x="932" y="406">mock gateway HMAC · KPIs</text></g>
+      <!-- data -->
+      <g class="node" data-id="models"><rect x="20" y="515" width="435" height="58" rx="10"/><text x="32" y="538">Models (P1): User Property Investment Transaction</text><text class="small" x="32" y="556">Payout Withdrawal Notification GatewayOrder Settings</text></g>
+      <g class="node" data-id="seed"><rect x="470" y="515" width="210" height="58" rx="10"/><text x="482" y="538">seed.ts (P2)</text><text class="small" x="482" y="556">8 props · 8 users · ledger</text></g>
+      <g class="node" data-id="concur"><rect x="695" y="515" width="210" height="58" rx="10"/><text x="707" y="538">concurrency-test</text><text class="small" x="707" y="556">10 units · 1 win / 1 × 409</text></g>
+      <g class="node" data-id="uploads"><rect x="920" y="515" width="260" height="58" rx="10"/><text x="932" y="538">Uploads + Cloudinary</text><text class="small" x="932" y="556">jpg/png/webp/pdf ≤5MB</text></g>
+      <!-- edges -->
+      <g id="edges">
+        <path class="edge" data-e="auth" d="M930 103 L800 150 L800 200"/>
+        <path class="edge" data-e="public" d="M125 103 L125 205"/>
+        <path class="edge" data-e="investor" d="M350 103 L350 205"/>
+        <path class="edge" data-e="brokerUI" d="M575 103 L575 205"/>
+        <path class="edge" data-e="adminUI" d="M800 103 L800 205"/>
+        <path class="edge" data-e="gateway" d="M230 234 L245 234"/>
+        <path class="edge" data-e="propAPI" d="M350 263 L350 365"/>
+        <path class="edge" data-e="investAPI" d="M800 263 L575 365"/>
+        <path class="edge" data-e="ledger" d="M575 423 L125 480 L125 515"/>
+        <path class="edge" data-e="payout" d="M1050 263 L800 365"/>
+        <path class="edge" data-e="money" d="M1050 423 L575 545"/>
+        <path class="edge" data-e="seed" d="M575 573 L350 573"/>
+      </g>
+    </svg>
+    <h3 style="font-size:13px;margin:8px 2px">Property lifecycle (P1 state machine · P2 uses it for /sell)</h3>
+    <div class="lifecycle">
+      <span class="st">DRAFT <small>broker</small></span><span class="arrow">→</span>
+      <span class="st">PENDING_APPROVAL <small>≥3 imgs</small></span><span class="arrow">→</span>
+      <span class="st">LIVE <small>invest</small></span><span class="arrow">→</span>
+      <span class="st">FUNDED <small>auto 100%</small></span><span class="arrow">→</span>
+      <span class="st">HOLDING <small>admin</small></span><span class="arrow">→</span>
+      <span class="st">SOLD <small>payout</small></span>
+      <span class="arrow">·</span><span class="st">REJECTED <small>reason</small></span>
+      <span class="st">CANCELLED <small>refund all</small></span>
+    </div>
+    <h3 style="font-size:13px;margin:8px 2px">Money rules (backend contract §3)</h3>
+    <table>
+      <tr><th>Rule</th><th>Enforced by</th></tr>
+      <tr><td>Integer paise everywhere (₹1 = 100), no floats in DB/API</td><td>P1 validators + Mongoose <code>Number.isInteger</code></td></tr>
+      <tr><td><code>walletBalance</code> only via <code>ledger.post()</code>; DEBIT = conditional <code>$gte</code> else 400</td><td><code>ledger.service.ts</code></td></tr>
+      <tr><td>Invest: KYC APPROVED, LIVE, minUnits, cap 49%, atomic <code>unitsSold $lte</code>, server amount</td><td><code>invest()</code> in one <code>withTransaction</code></td></tr>
+      <tr><td>100% → FUNDED + <code>floor(valuation×pct/100)</code> COMMISSION once + notify</td><td><code>invest()</code> same TX</td></tr>
+      <tr><td>Payout: <code>fee=floor(sale×bps/10000)</code>, per-holder <code>floor</code>, remainder → largest holder</td><td><code>computePayout</code> BigInt + <code>executePayout</code> TX</td></tr>
+      <tr><td>Cancel: refund every ACTIVE in one TX → REFUNDED + CANCELLED</td><td><code>POST /properties/:id/status</code></td></tr>
+    </table>
+    <h3 style="font-size:13px;margin:12px 2px 4px">Demo script (record in this order)</h3>
+    <table>
+      <tr><th>#</th><th>Step</th><th>Proof</th></tr>
+      <tr><td>1</td><td>Rohit registers → admin approves broker → creates + submits (≥3 imgs)</td><td>PENDING_APPROVAL</td></tr>
+      <tr><td>2</td><td>Admin approves → LIVE</td><td>marketplace shows it</td></tr>
+      <tr><td>3</td><td>Aman signup → KYC → admin approves → mock top-up</td><td>TOPUP ledger row</td></tr>
+      <tr><td>4</td><td>Invest ₹2,00,000 (20 units = 2%)</td><td>“You now own 2%”</td></tr>
+      <tr><td>5</td><td>Fund to 100% → FUNDED + commission</td><td>COMMISSION row once</td></tr>
+      <tr><td>6</td><td>Admin → HOLDING</td><td>notify investors</td></tr>
+      <tr><td>7</td><td>Sell ₹1,40,00,000 → Aman ₹2,74,400 ROI 37.2%</td><td>sum == distributable ✓</td></tr>
+      <tr><td>8</td><td>Two windows buy last 10 units → 1× success, 1× 409</td><td>no oversell</td></tr>
+      <tr><td>9</td><td>Investor token → admin API → 403</td><td>RBAC</td></tr>
+    </table>
+  </div>
+  <aside class="panel">
+    <h2 id="dTitle">Click any box</h2>
+    <p id="dBody" style="color:var(--muted)">Details, owner, contract and unhappy paths appear here. Start with a flow chip above — it lights the path through the SVG.</p>
+    <div id="dExtra"></div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
+    <div style="font-size:12px;color:var(--muted)">Seed logins: <code>admin@demo.com / Admin@123</code> · <code>rohit@demo.com / Broker@123</code> · <code>aman@demo.com / Investor@123</code> · fresh investor = empty states. API: <code>/api/v1</code> <code>{success,data}</code> · token <code>fre_token</code>.</div>
+  </aside>
+</main>
+<div class="footer">Academic project — no real money or securities. P1 owns core/ledger/property/invest · P2 owns payout/wallet/seed · P3 owns kit+investor · P4 admin · P5 broker+auth.</div>
+<script>
+const details={
+public:{t:'Public site (P3)',b:'Landing, marketplace filters (city/type/price/status/funding, URL-synced), property detail (gallery, metrics, calculator, map). Public sees LIVE/FUNDED (+HOLDING/SOLD if asked).',e:'Owner P3 · GET /properties · GET /properties/:id'},
+investor:{t:'Investor slice (P3)',b:'Dashboard (summary KPIs + donut), portfolio, invest checkout (idempotencyKey, clamp, 409 handling), wallet mock top-up/verify + withdrawals + ledger, KYC upload, notifications.',e:'Guards: KYC≠APPROVED → /kyc · wallet shortfall → “Add ₹X more”'},
+brokerUI:{t:'Broker slice (P5)',b:'Dashboard stats, My properties, 5-step wizard (Basics→Location→Financials→Media→Review), save-draft, submit ≥3 images, funding timeline, masked investors.',e:'Unapproved broker → banner + 403 BROKER_NOT_APPROVED'},
+adminUI:{t:'Admin slice (P4)',b:'Stats KPIs + charts + queues, properties approve/reject/cancel/holding, record-sale with live payout preview + sum-check + double-click-safe sell, users/KYC/withdrawals/settings.',e:'Seeded HOLDING @ ₹1.4Cr → Aman ₹2,74,400 ✓'},
+auth:{t:'Auth plumbing (P5)',b:'AuthContext (fre_token, /auth/me on mount), RoleGuard (→ /login?next, wrong role → /403), GuestOnly, roleHome. Login/signup/profile pages.',e:'ADMIN never registrable · deactivated → 401 everywhere'},
+gateway:{t:'route() gateway (P1)',b:'connectDB, sanitize $/., zod → 400 VALIDATION_ERROR, JWT → user, isActive else 401, roles else 403, rateLimit auth 10/min + invest 20/min → 429, duplicate idempotencyKey → 409 DUPLICATE_REQUEST.',e:'No stack traces · standard {success,error{code,message}}'},
+authAPI:{t:'Auth + uploads API (P1)',b:'POST register/login/logout, GET me, POST change-password. POST /uploads: jpg/png/webp/pdf ≤5MB → Cloudinary else picsum fallback.',e:'409 on duplicate email · “Invalid email or password” generic'},
+propAPI:{t:'Property lifecycle API (P1)',b:'POST create DRAFT (whole-rupee unitPrice, default 49% cap), PATCH (LOCKED_FIELDS ≥LIVE), submit/approve/reject/status(HOLDING+CANCEL-refund TX)/investors(masked for broker).',e:'Filters: minFunding/maxFunding + fundingPct sort (aggregate)'},
+investAPI:{t:'Investment engine (P1 ★)',b:'POST /investments INVESTOR-only. invest() withTransaction: KYC→403, LIVE else 409, minUnits 400, cap 409, atomic unitsSold $lte else “Only N remain”, ledger DEBIT, create ACTIVE, 100%→FUNDED+commission.',e:'Never trust client amount · TransientTransactionError retried'},
+moneyAPI:{t:'Money & admin APIs (P2)',b:'payout-preview (no writes) + sell (TX: Payout doc, PAYOUT credits, FEE credit, EXITED, SOLD), wallet order/verify HMAC + DUPLICATE_PAYMENT, withdrawals, portfolio est-value, admin stats/users/KYC/settings, broker stats.',e:'Second /sell → 409 ALREADY_SOLD, no double credit'},
+ledger:{t:'ledger.post — only money writer',b:'CREDIT $inc / DEBIT conditional {walletBalance:$gte} else INSUFFICIENT_BALANCE. Writes balanceAfter + Transaction row. Accepts session.',e:'Wallet == Σ ledger. Never write walletBalance directly.'},
+propSvc:{t:'property.service',b:'assertTransition(from,to) table, serializeProperty adds fundingPct/remainingUnits/investorCount/broker. Aggregate-safe (toIso, [] guards).',e:'P2 reuses it for /sell.'},
+investSvc:{t:'investment.service invest()',b:'Session TX steps 1-8 + post-commit notify (broker + investors). Returns {investment, property{unitsSold,fundingPct,status}, walletBalance, message}.',e:'Ownership % to 2dp · commission floor integer math.'},
+payoutSvc:{t:'payout.service (pure + TX)',b:'computePayout pure BigInt: fee/distributable/items/remainder→largest, sum==distributable assert. preview enriches roi%. execute in TX.',e:'PS example: 20/1000 → ₹2,74,400.'},
+walletSvc:{t:'Wallet/portfolio/stats',b:'Mock gateway: orderId=order_uuid, HMAC(order|pay), GatewayOrder CREATED→PAID atomic, credit from stored order. Portfolio: est-value w/ appreciation^years capped, zeros for fresh (no NaN).',e:'TEST MODE banner — no real money.'},
+models:{t:'Mongoose models (P1)',b:'User/Property/Investment/Transaction/Payout(unique propertyId)/Withdrawal/Notification/GatewayOrder/Settings. Indexes: email unique, status/city/broker, investor+property, idempotencyKey sparse, gatewayPaymentId sparse.',e:'Field names FIXED by §5 contract.'},
+seed:{t:'Seed (P2, by T+45)',b:'Wipe+insert via models + ledger.post (never direct balance). Rohit broker, 5 KYC investors + fresh, 8+ properties (LIVE 470/1000, 10-left, FUNDED, HOLDING, SOLD w/ payout, PENDING, REJECTED, DRAFT).',e:'npm run seed · prints table.'},
+concur:{t:'Concurrency proof (P1+P3)',b:'concurrency-test.ts: 10 units left, 2 investors, Promise.allSettled → exactly 1 success + 1×409 INSUFFICIENT_UNITS, unitsSold==total, FUNDED, commission once. Scoped to test property only.',e:'npm run concurrency · demo video T+135.'},
+uploads:{t:'Uploads media',b:'Multipart file, client checks MIME/size + progress, POST /uploads → {url,publicId,name}. ≥3 images to submit.',e:'Missing Cloudinary env → labeled fallback.'}
+};
+const flows={
+'Happy path':['brokerUI','propAPI','propSvc','adminUI','public','investor','moneyAPI','walletSvc','investAPI','investSvc','ledger','models','payoutSvc','seed'],
+'Invest (atomic)':['investor','investAPI','investSvc','ledger','models'],
+'Payout (sell)':['adminUI','moneyAPI','payoutSvc','ledger','models'],
+'Cancel + refund':['adminUI','propAPI','ledger','models'],
+'Concurrency':['concur','investSvc','ledger','models'],
+'RBAC guards':['auth','gateway','authAPI','propAPI','moneyAPI']
+};
+const flowsEl=document.getElementById('flows');
+Object.keys(flows).forEach((f,i)=>{
+  const b=document.createElement('button');b.className='flow-chip'+(i===0?' active':'');b.textContent=f;
+  b.onclick=()=>{document.querySelectorAll('.flow-chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');playFlow(f);};
+  flowsEl.appendChild(b);
+});
+function clearHL(){document.querySelectorAll('.node').forEach(n=>n.classList.remove('active','dim'));document.querySelectorAll('.edge').forEach(e=>e.classList.remove('active','dim'));}
+function playFlow(name){
+  clearHL();
+  const seq=flows[name];let i=0;
+  const allNodes=[...document.querySelectorAll('.node')];
+  allNodes.forEach(n=>{if(!seq.includes(n.dataset.id))n.classList.add('dim');});
+  document.querySelectorAll('.edge').forEach(e=>e.classList.add('dim'));
+  const step=()=>{
+    if(i>0){const prev=document.querySelector(`.node[data-id="${seq[i-1]}"]`);if(prev)prev.classList.remove('active');}
+    if(i>=seq.length){document.querySelectorAll('.edge').forEach(e=>e.classList.remove('dim'));return;}
+    const n=document.querySelector(`.node[data-id="${seq[i]}"]`);if(n){n.classList.remove('dim');n.classList.add('active');showDetail(n.dataset.id);}
+    document.querySelectorAll('.edge').forEach(e=>e.classList.add('active'));
+    i++;setTimeout(step,900);
+  };step();
+}
+function showDetail(id){
+  const d=details[id];if(!d)return;
+  document.getElementById('dTitle').textContent=d.t;
+  document.getElementById('dBody').textContent=d.b;
+  document.getElementById('dExtra').innerHTML='<p style="font-size:12px;color:var(--muted)">'+d.e+'</p>';
+}
+document.querySelectorAll('.node').forEach(n=>n.addEventListener('click',()=>{clearHL();n.classList.add('active');showDetail(n.dataset.id);}));
+document.getElementById('themeBtn').onclick=()=>{const h=document.documentElement;h.classList.toggle('dark');try{localStorage.setItem('fre-flow-theme',h.classList.contains('dark')?'dark':'light');}catch(e){}};
+playFlow('Happy path');
+</script>
+</body>
+</html>

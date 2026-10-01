@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { route } from "@/lib/server/handler";
 import { ok } from "@/lib/server/http";
 import { Property } from "@/lib/server/models/Property";
@@ -72,3 +73,4 @@ export const GET = route(
     return ok({ items });
   }
 );
+

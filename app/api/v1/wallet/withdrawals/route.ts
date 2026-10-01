@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { route } from '@/lib/server/handler';
 import { ok } from '@/lib/server/http';
 import { Withdrawal } from '@/lib/server/models';
@@ -10,3 +11,4 @@ export const GET = route({ auth: true, roles: ['INVESTOR'] }, async ({ user, que
   const [items, total] = await Promise.all([Withdrawal.find(filter).sort({ createdAt: -1, _id: -1 }).skip(skip).limit(limit), Withdrawal.countDocuments(filter)]);
   return ok(listResult(items, total, page, limit));
 });
+

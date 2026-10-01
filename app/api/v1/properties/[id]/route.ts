@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { route } from "@/lib/server/handler";
 import { ok } from "@/lib/server/http";
 import { Property } from "@/lib/server/models/Property";
@@ -120,3 +121,4 @@ export const PATCH = route<UpdatePropertyInput>(
     return ok(serialized, "Property updated successfully");
   }
 );
+

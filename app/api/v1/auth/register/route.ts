@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import bcrypt from "bcryptjs";
 import { route } from "@/lib/server/handler";
 import { ok } from "@/lib/server/http";
@@ -41,3 +42,4 @@ export const POST = route<RegisterInput>(
     return ok({ user: userObj }, "Registration successful", 201);
   }
 );
+

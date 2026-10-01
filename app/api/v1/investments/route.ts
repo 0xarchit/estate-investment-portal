@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { route } from "@/lib/server/handler";
 import { ok } from "@/lib/server/http";
 import { invest } from "@/lib/server/services/investment.service";
@@ -21,3 +22,4 @@ export const POST = route<InvestInput>(
     return ok(result, result.message, 201);
   }
 );
+

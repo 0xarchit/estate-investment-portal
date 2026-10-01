@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { route } from "@/lib/server/handler";
 import { ok } from "@/lib/server/http";
 
@@ -9,3 +10,4 @@ export const POST = route(
     return ok({}, "Logged out successfully");
   }
 );
+

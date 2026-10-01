@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import mongoose from "mongoose";
 import { route } from "@/lib/server/handler";
 import { ok } from "@/lib/server/http";
@@ -109,3 +110,4 @@ export const POST = route<ChangePropertyStatusInput>(
     throw new ApiError(400, "VALIDATION_ERROR", "Unsupported status transition");
   }
 );
+

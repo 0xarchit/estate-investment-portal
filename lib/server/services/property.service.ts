@@ -63,6 +63,7 @@ export interface SerializedProperty {
   fundingPct: number;
   remainingUnits: number;
   investorCount: number;
+  commissionEarned?: number;
   broker?: {
     _id: string;
     name: string;
@@ -71,7 +72,7 @@ export interface SerializedProperty {
 
 export async function serializeProperty(
   property: IProperty,
-  extras?: { investorCount?: number; brokerName?: string }
+  extras?: { investorCount?: number; brokerName?: string; commissionEarned?: number }
 ): Promise<SerializedProperty> {
   const remainingUnits = Math.max(0, property.totalUnits - property.unitsSold);
   const fundingPct = Number(
@@ -138,6 +139,7 @@ export async function serializeProperty(
     fundingPct,
     remainingUnits,
     investorCount,
+    commissionEarned: extras?.commissionEarned,
     broker: {
       _id: property.brokerId.toString(),
       name: brokerName || "Broker",

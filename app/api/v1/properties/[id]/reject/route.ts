@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { route } from "@/lib/server/handler";
 import { ok } from "@/lib/server/http";
 import { Property } from "@/lib/server/models/Property";
@@ -38,3 +39,4 @@ export const POST = route<RejectPropertyInput>(
     return ok(serialized, "Property rejected with reason");
   }
 );
+

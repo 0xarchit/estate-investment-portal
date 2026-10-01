@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { route } from '@/lib/server/handler';
 import { ok } from '@/lib/server/http';
 import { Transaction } from '@/lib/server/models';
@@ -13,3 +14,4 @@ export const GET = route({ auth: true, roles: ['ADMIN', 'BROKER', 'INVESTOR'] },
   const [items, total] = await Promise.all([Transaction.find(filter).sort({ createdAt: -1, _id: -1 }).skip(skip).limit(limit), Transaction.countDocuments(filter)]);
   return ok(listResult(items, total, page, limit));
 });
+

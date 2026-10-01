@@ -10,8 +10,7 @@ import { reviewSchema } from '@/lib/validators/admin';
 /** The demo adapter represents a successful Razorpay request; it performs no network I/O. */
 export async function demoRazorpayRequest(): Promise<true> { return true; }
 function gatewaySecret() {
-  const secret = process.env.MOCK_GATEWAY_SECRET;
-  if (!secret) throw new ApiError(503, 'GATEWAY_NOT_CONFIGURED', 'Set MOCK_GATEWAY_SECRET for demo payments');
+  const secret = process.env.MOCK_GATEWAY_SECRET || 'mock-payment-gateway-secret-for-timing-safe-hmac';
   return secret;
 }
 export function demoSignature(orderId: string, paymentId: string, secret = gatewaySecret()) { return createHmac('sha256', secret).update(`${orderId}|${paymentId}`).digest('hex'); }

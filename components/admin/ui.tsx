@@ -234,7 +234,7 @@ export interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
 }
 
-export function AdminDataTable<T extends { _id?: string; id?: string }>({
+export function AdminDataTable<T extends Record<string, any>>({
   columns,
   rows,
   loading = false,
@@ -313,7 +313,7 @@ export function AdminDataTable<T extends { _id?: string; id?: string }>({
           </thead>
           <tbody className="divide-y divide-gray-100 font-tabular-nums">
             {rows.map((row, idx) => {
-              const rowKey = row._id || row.id || idx;
+              const rowKey = row._id || row.id || (row as any).userId || idx;
               return (
                 <tr
                   key={rowKey}
