@@ -1,6 +1,6 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
-import mongoose from 'mongoose';
-import { GatewayOrder, Transaction, Withdrawal } from '@/lib/server/models';
+import mongoose, { ClientSession } from 'mongoose';
+import { GatewayOrder, Transaction, Withdrawal, User } from '@/lib/server/models';
 import { ApiError } from '@/lib/server/errors';
 import { ledger } from '@/lib/server/services/ledger.service';
 import { notify } from '@/lib/server/services/notification.service';
@@ -9,6 +9,18 @@ import { reviewSchema } from '@/lib/validators/admin';
 
 /** The demo adapter represents a successful Razorpay request; it performs no network I/O. */
 export async function demoRazorpayRequest(): Promise<true> { return true; }
+async function activeInvestor(userId: string, session?: ClientSession) {
+  const user = await User.findById(userId).session(session ?? null);
+  if (!user || !user.isActive) throw new ApiError(401, 'UNAUTHENTICATED', 'Account is unavailable');
+  if (user.role !== 'INVESTOR') throw new ApiError(403, 'FORBIDDEN', 'An investor account is required');
+  return user;
+}
+
+export function assertWalletCredit(balance: number, amount: number) {
+  if (!Number.isSafeInteger(balance) || balance < 0 || !Number.isSafeInteger(amount) || amount <= 0 || !Number.isSafeInteger(balance + amount)) {
+    throw new ApiError(409, 'BALANCE_LIMIT', 'This credit exceeds the supported wallet balance');
+  }
+}
 function gatewaySecret() {
   const secret = process.env.MOCK_GATEWAY_SECRET || 'mock-payment-gateway-secret-for-timing-safe-hmac';
   return secret;
@@ -20,6 +32,7 @@ export function verifyDemoSignature(orderId: string, paymentId: string, signatur
 }
 export async function createTopupOrder(userId: string, amount: number) {
   objectIdSchema.parse(userId); topupOrderSchema.parse({ amount });
+  await activeInvestor(userId);
   const orderId = `order_${randomUUID()}`, paymentId = `pay_${randomUUID()}`;
   const signature = demoSignature(orderId, paymentId);
   await demoRazorpayRequest();
@@ -33,10 +46,13 @@ export async function verifyTopup(userId: string, input: TopupVerification) {
   const session = await mongoose.startSession();
   try {
     return await session.withTransaction(async () => {
+      const investor = await activeInvestor(userId, session);
       const order = await GatewayOrder.findOne({ orderId, userId }).session(session);
       if (!order) throw new ApiError(404, 'NOT_FOUND', 'Demo payment order not found');
       if (order.status !== 'CREATED' || await Transaction.exists({ gatewayPaymentId: paymentId }).session(session)) throw new ApiError(409, 'DUPLICATE_PAYMENT', 'This payment has already been credited');
-      if (order.paymentId && order.paymentId !== paymentId) throw new ApiError(400, 'INVALID_PAYMENT', 'Payment does not match the demo order');
+      if (order.paymentId !== paymentId) throw new ApiError(400, 'INVALID_PAYMENT', 'Payment does not match the demo order');
+      if (!topupOrderSchema.safeParse({ amount: order.amount }).success) throw new ApiError(409, 'INVALID_ORDER', 'Stored demo order amount is invalid');
+      assertWalletCredit(investor.walletBalance, order.amount);
       const paymentSuccess = await demoRazorpayRequest();
       const claimed = await GatewayOrder.findOneAndUpdate({ orderId, userId, status: 'CREATED' }, { $set: { status: 'PAID', paymentId } }, { new: true, session });
       if (!claimed) throw new ApiError(409, 'DUPLICATE_PAYMENT', 'This payment has already been credited');
@@ -44,13 +60,17 @@ export async function verifyTopup(userId: string, input: TopupVerification) {
       return { balance: transaction.balanceAfter, mock: true, paymentSuccess };
     });
   } catch (error) {
-    if (typeof error === 'object' && error && 'code' in error && error.code === 11000) throw new ApiError(409, 'DUPLICATE_PAYMENT', 'This payment has already been credited');
+    if (typeof error === 'object' && error && 'code' in error && error.code === 11000 &&
+      'keyPattern' in error && error.keyPattern && typeof error.keyPattern === 'object' && 'gatewayPaymentId' in error.keyPattern) {
+      throw new ApiError(409, 'DUPLICATE_PAYMENT', 'This payment has already been credited');
+    }
     throw error;
   } finally { await session.endSession(); }
 }
 export async function requestWithdrawal(userId: string, input: WithdrawalInput) {
   objectIdSchema.parse(userId); const body = withdrawalSchema.parse(input);
-  if (body.amount > await ledger.getBalance(userId)) throw new ApiError(400, 'INSUFFICIENT_BALANCE', 'Insufficient wallet balance');
+  const investor = await activeInvestor(userId);
+  if (body.amount > investor.walletBalance) throw new ApiError(400, 'INSUFFICIENT_BALANCE', 'Insufficient wallet balance');
   // A request does not reserve/debit funds. Approval rechecks balance atomically through the ledger.
   return Withdrawal.create({ userId, ...body, status: 'PENDING' });
 }
@@ -59,6 +79,9 @@ export async function processWithdrawal(id: string, adminId: string, input: { ac
   const session = await mongoose.startSession();
   try {
     return await session.withTransaction(async () => {
+      if (!await User.exists({ _id: adminId, role: 'ADMIN', isActive: true }).session(session)) {
+        throw new ApiError(403, 'FORBIDDEN', 'An active admin is required to process a withdrawal');
+      }
       const withdrawal = await Withdrawal.findById(id).session(session);
       if (!withdrawal) throw new ApiError(404, 'NOT_FOUND', 'Withdrawal not found');
       if (withdrawal.status !== 'PENDING') throw new ApiError(409, 'CONFLICT', 'Withdrawal has already been processed');
