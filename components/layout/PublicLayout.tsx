@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { Building2, Menu, X, ArrowUpRight } from "lucide-react";
+import { Menu, X, ArrowUpRight } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { roleHome } from "@/lib/auth/RoleGuard";
 import { usePathname } from "next/navigation";
@@ -12,9 +12,7 @@ export function Brand({ light = false }: { light?: boolean }) {
       aria-label="EstatePortal home"
       className={`inline-flex items-center gap-2.5 text-lg font-semibold tracking-tight ${light ? "text-white" : "text-navy"}`}
     >
-      <span className="flex h-9 w-9 items-center justify-center border border-gold-500 rounded-lg text-gold-500">
-        <Building2 size={21} />
-      </span>
+      <img src="/logo.svg" alt="" width={36} height={36} className="h-9 w-9" />
       Estate<span className="font-normal -ml-2">Portal</span>
     </Link>
   );

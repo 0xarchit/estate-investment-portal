@@ -19,6 +19,7 @@ export const metadata: Metadata = {
   },
   description:
     "Explore fractional property ownership. Discover properties, understand your investment, and manage your portfolio.",
+  icons: { icon: "/logo.svg" },
 };
 export default function RootLayout({
   children,

@@ -18,11 +18,9 @@ export function AuthCard({ title, subtitle, children, variant }: Props) {
       <div className="auth-card w-full max-w-md rounded-2xl bg-white p-5 sm:p-8 shadow-sm ring-1 ring-black/5">
         {/* Brand mark */}
         <Link href="/" aria-label="Go to EstatePortal home" className="mb-6 inline-flex items-center gap-2 rounded-lg">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0F2A4A]">
-            <span className="text-xs font-bold text-[#10B981]">FRE</span>
-          </div>
+          <img src="/logo.svg" alt="" width={32} height={32} className="h-8 w-8" />
           <span className="text-sm font-semibold text-[#0F2A4A]">
-            Fractional Real Estate
+            Estate<span className="font-normal">Portal</span>
           </span>
         </Link>
 
