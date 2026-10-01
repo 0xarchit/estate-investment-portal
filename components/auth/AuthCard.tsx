@@ -4,14 +4,15 @@ interface Props {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
+  variant?: 'login';
 }
 
 /**
  * Shared card wrapper used by login, signup, forgot-password pages.
  */
-export function AuthCard({ title, subtitle, children }: Props) {
+export function AuthCard({ title, subtitle, children, variant }: Props) {
   return (
-    <main id="main-content" tabIndex={-1} className="flex min-h-screen items-center justify-center bg-[#F7F8FA] px-4 py-12">
+    <main id="main-content" tabIndex={-1} className={`flex min-h-screen items-center justify-center bg-[#F7F8FA] px-4 py-12${variant === 'login' ? ' login-page' : ''}`}>
       <div className="auth-card w-full max-w-md rounded-2xl bg-white p-5 sm:p-8 shadow-sm ring-1 ring-black/5">
         {/* Brand mark */}
         <div className="mb-6 flex items-center gap-2">

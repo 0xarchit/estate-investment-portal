@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Eye, EyeOff, ChevronDown, ChevronUp, TrendingUp, Building2, ShieldCheck, Check } from 'lucide-react';
+import { Eye, EyeOff, ChevronDown, ChevronUp, TrendingUp, Building2, ShieldCheck, Check, ArrowRight, Loader2 } from 'lucide-react';
 
 import { GuestOnly } from '@/lib/auth/RoleGuard';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -34,6 +34,7 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showDemo, setShowDemo] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [demoSelection, setDemoSelection] = useState<string | null>(null);
 
   const {
     register,
@@ -58,10 +59,11 @@ function LoginForm() {
   return (
     <GuestOnly nextPath={nextPath}>
       <AuthCard
+        variant="login"
         title="Welcome back"
         subtitle="Choose your workspace and sign in to continue."
       >
-        <form onSubmit={handleSubmit(onSubmit)} noValidate aria-busy={isSubmitting} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} noValidate aria-busy={isSubmitting} className="space-y-5">
           <fieldset disabled={isSubmitting} aria-describedby="login-role-hint">
             <legend className="mb-2 text-sm font-semibold text-navy">Login as</legend>
             <div className="grid grid-cols-3 gap-2">
@@ -103,13 +105,14 @@ function LoginForm() {
                 autoComplete="current-password"
                 placeholder="••••••••"
                 error={!!errors.password}
-                className="pr-10"
+                className="pr-12"
                 {...register('password')}
               />
               <button
                 type="button"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
                 aria-pressed={showPassword}
+                disabled={isSubmitting}
                 onClick={() => setShowPassword((v) => !v)}
                 className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-[#6B7280] hover:text-[#111827]"
               >
@@ -121,7 +124,7 @@ function LoginForm() {
           <div className="flex justify-end">
             <Link
               href="/forgot-password"
-              className="text-xs text-emerald-700 hover:underline"
+              className="text-sm font-medium text-emerald-700 hover:underline"
             >
               Forgot password?
             </Link>
@@ -130,50 +133,52 @@ function LoginForm() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="btn w-full"
+            className="btn login-submit w-full"
           >
             {isSubmitting ? 'Signing in…' : `Sign in as ${roleLabel}`}
+            {isSubmitting ? <Loader2 size={17} className="animate-spin" aria-hidden="true" /> : <ArrowRight size={17} aria-hidden="true" />}
           </button>
         </form>
 
         {/* Demo credentials */}
-        <div className="mt-4 rounded-lg border border-dashed border-[#10B981]/40 bg-emerald-50/50">
+        <div className="mt-6 overflow-hidden rounded-xl border border-emerald-100 bg-emerald-50/50">
           <button
             type="button"
             aria-expanded={showDemo}
             aria-controls="demo-credentials"
             onClick={() => setShowDemo((v) => !v)}
-            className="flex w-full items-center justify-between px-3 py-2 text-xs font-medium text-[#0F2A4A]"
+            className="flex min-h-11 w-full items-center justify-between gap-2 px-4 py-3 text-sm font-medium text-[#0F2A4A] hover:bg-emerald-50"
           >
-            Demo credentials (evaluator)
+            Explore a demo account
             {showDemo ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
           {showDemo && (
-            <ul id="demo-credentials" className="divide-y divide-emerald-100 pb-2">
+            <ul id="demo-credentials" className="login-demo-list divide-y divide-emerald-100 border-t border-emerald-100">
               {DEMO_CREDENTIALS.map((d) => (
                 <li
                   key={d.email}
-                  className="flex items-center justify-between px-3 py-1.5"
                 >
-                  <span className="text-xs text-[#6B7280]">{d.role}</span>
                   <button
                     type="button"
                     disabled={isSubmitting}
                     onClick={() => {
-                      setValue('email', d.email);
-                      setValue('password', d.password);
+                      setValue('email', d.email, { shouldValidate: true });
+                      setValue('password', d.password, { shouldValidate: true });
                       setValue('role', d.value);
                       setSubmitError(null);
+                      setDemoSelection(d.role);
                     }}
-                    className="min-h-11 rounded px-2 py-0.5 text-xs text-emerald-700 hover:bg-emerald-100"
+                    className="flex min-h-11 w-full items-center justify-between gap-2 px-4 py-3 text-left text-xs text-emerald-800 hover:bg-emerald-100 disabled:opacity-60"
                   >
-                    {d.email}
+                    <span className="min-w-0"><span className="block font-semibold text-navy">{d.role}</span><span className="mt-1 block break-all">{d.email}</span></span>
+                    <ArrowRight size={14} className="shrink-0" aria-hidden="true" />
                   </button>
                 </li>
               ))}
             </ul>
           )}
         </div>
+        <p role="status" className="mt-2 text-xs text-slate-600">{demoSelection ? `${demoSelection} details filled. Select sign in to continue.` : 'Demo accounts use simulated funds.'}</p>
 
         <p className="mt-4 text-center text-sm text-[#6B7280]">
           Don&apos;t have an account?{' '}
