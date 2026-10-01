@@ -8,7 +8,8 @@ export function estimateValue(input: ValuationInput, now = new Date()) {
   if (input.status === 'CANCELLED' || input.status === 'REFUNDED') return input.invested;
   // Academic projection: compound annual appreciation from funding (or first purchase),
   // capped at the advertised holding period. It is an estimate, never a wallet mutation.
-  const start = input.fundedAt ?? input.firstInvestmentAt;
+  // A later purchase must not receive appreciation for time before it was bought.
+  const start = new Date(Math.max(input.firstInvestmentAt.getTime(), input.fundedAt?.getTime() ?? 0));
   const elapsed = Math.max(0, (now.getTime() - start.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
   const years = Math.min(elapsed, (input.holdingPeriodMonths ?? 0) / 12);
   const value = Math.round(input.invested * Math.pow(Math.max(0, 1 + input.expectedAppreciationPct / 100), years));
@@ -17,18 +18,29 @@ export function estimateValue(input: ValuationInput, now = new Date()) {
 export async function getHoldings(userId: string, now = new Date()) {
   objectIdSchema.parse(userId);
   const purchases = await Investment.find({ investorId: userId, status: { $in: ['ACTIVE', 'EXITED', 'REFUNDED'] } }).sort({ createdAt: 1, _id: 1 });
-  const groups = new Map<string, { units: number; invested: number; payoutReceived: number; firstInvestmentAt: Date; statuses: Set<string> }>();
+  const groups = new Map<string, { units: number; invested: number; payoutReceived: number; firstInvestmentAt: Date; statuses: Set<string>; purchases: Array<{ amount: number; status: string; payoutAmount?: number; createdAt: Date }> }>();
   for (const purchase of purchases) {
     const id = String(purchase.propertyId);
-    const group = groups.get(id) ?? { units: 0, invested: 0, payoutReceived: 0, firstInvestmentAt: purchase.createdAt, statuses: new Set<string>() };
+    const group = groups.get(id) ?? { units: 0, invested: 0, payoutReceived: 0, firstInvestmentAt: purchase.createdAt, statuses: new Set<string>(), purchases: [] };
     group.units += purchase.units; group.invested += purchase.amount; group.payoutReceived += purchase.payoutAmount ?? 0; group.statuses.add(purchase.status);
+    group.purchases.push(purchase);
     groups.set(id, group);
   }
   const properties = await Property.find({ _id: { $in: [...groups.keys()] } });
   return properties.map(property => {
     const group = groups.get(String(property._id))!;
     const status = group.statuses.has('ACTIVE') ? 'ACTIVE' : group.statuses.has('EXITED') ? 'EXITED' : 'REFUNDED';
-    const estimatedValue = estimateValue({ ...group, status: property.status === 'SOLD' || property.status === 'CANCELLED' ? property.status : status, expectedAppreciationPct: property.expectedAppreciationPct ?? 0, holdingPeriodMonths: property.holdingPeriodMonths, fundedAt: property.fundedAt }, now);
+    // Project each purchase separately: grouping all money at the first purchase
+    // date overstates the return on units bought later.
+    const estimatedValue = group.purchases.reduce((total, purchase) => total + estimateValue({
+      invested: purchase.amount,
+      payoutReceived: purchase.payoutAmount ?? 0,
+      firstInvestmentAt: purchase.createdAt,
+      status: purchase.status === 'REFUNDED' ? 'REFUNDED' : property.status === 'SOLD' || property.status === 'CANCELLED' ? property.status : purchase.status,
+      expectedAppreciationPct: property.expectedAppreciationPct ?? 0,
+      holdingPeriodMonths: property.holdingPeriodMonths,
+      fundedAt: property.fundedAt,
+    }, now), 0);
     return {
       propertyId: String(property._id), property: { title: property.title, city: property.city, image: property.images?.[0]?.url ?? null, status: property.status, unitPrice: property.unitPrice, expectedAppreciationPct: property.expectedAppreciationPct ?? 0 },
       units: group.units, ownershipPct: property.totalUnits ? group.units / property.totalUnits * 100 : 0,
