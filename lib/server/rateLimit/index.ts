@@ -7,15 +7,15 @@ interface RateLimitRecord {
 
 const rateLimitStore = new Map<string, RateLimitRecord>();
 
-// Cleanup stale entries every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, record] of rateLimitStore.entries()) {
-    if (now > record.resetTime) {
-      rateLimitStore.delete(key);
+function cleanStaleRecords(now: number): void {
+  if (rateLimitStore.size > 500) {
+    for (const [key, record] of rateLimitStore.entries()) {
+      if (now > record.resetTime) {
+        rateLimitStore.delete(key);
+      }
     }
   }
-}, 300000);
+}
 
 export function checkRateLimit(
   identifier: string,
@@ -23,6 +23,8 @@ export function checkRateLimit(
   windowMs = 60000
 ): void {
   const now = Date.now();
+  cleanStaleRecords(now);
+
   const record = rateLimitStore.get(identifier);
 
   if (!record || now > record.resetTime) {

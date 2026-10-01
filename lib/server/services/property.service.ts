@@ -95,6 +95,13 @@ export async function serializeProperty(
     brokerName = broker?.name || "Broker";
   }
 
+  const toIso = (d: unknown) => {
+    if (!d) return undefined;
+    if (typeof d === "string") return d;
+    if (d instanceof Date) return d.toISOString();
+    return new Date(String(d)).toISOString();
+  };
+
   return {
     _id: property._id.toString(),
     title: property.title,
@@ -106,14 +113,14 @@ export async function serializeProperty(
     pincode: property.pincode,
     geo: property.geo,
     areaSqft: property.areaSqft,
-    images: property.images,
-    documents: property.documents,
+    images: property.images || [],
+    documents: property.documents || [],
     valuation: property.valuation,
     totalUnits: property.totalUnits,
     unitPrice: property.unitPrice,
     minUnits: property.minUnits,
     maxUnitsPerInvestor: property.maxUnitsPerInvestor,
-    unitsSold: property.unitsSold,
+    unitsSold: property.unitsSold || 0,
     expectedAppreciationPct: property.expectedAppreciationPct,
     rentalYieldPct: property.rentalYieldPct,
     holdingPeriodMonths: property.holdingPeriodMonths,
@@ -122,12 +129,12 @@ export async function serializeProperty(
     brokerId: property.brokerId.toString(),
     approvedBy: property.approvedBy?.toString(),
     salePrice: property.salePrice,
-    soldAt: property.soldAt?.toISOString(),
-    fundedAt: property.fundedAt?.toISOString(),
-    liveAt: property.liveAt?.toISOString(),
-    cancelledAt: property.cancelledAt?.toISOString(),
-    createdAt: property.createdAt.toISOString(),
-    updatedAt: property.updatedAt.toISOString(),
+    soldAt: toIso(property.soldAt),
+    fundedAt: toIso(property.fundedAt),
+    liveAt: toIso(property.liveAt),
+    cancelledAt: toIso(property.cancelledAt),
+    createdAt: toIso(property.createdAt) || new Date().toISOString(),
+    updatedAt: toIso(property.updatedAt) || new Date().toISOString(),
     fundingPct,
     remainingUnits,
     investorCount,

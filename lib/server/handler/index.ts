@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ZodError, ZodSchema } from "zod";
+import { ZodError, ZodType } from "zod";
 import { connectDB } from "@/lib/server/db";
 import { User, IUser, UserRole } from "@/lib/server/models/User";
 import { ApiError } from "@/lib/server/errors";
@@ -12,7 +12,7 @@ export interface RouteOptions<TBody = unknown> {
   optionalAuth?: boolean;
   roles?: UserRole[];
   rateLimit?: "auth" | "invest";
-  schema?: ZodSchema<TBody>;
+  schema?: ZodType<TBody, any, any>;
 }
 
 export interface RouteContext<TBody = unknown> {
@@ -165,6 +165,19 @@ export function route<TBody = unknown>(
 
       // Mongo duplicate key error (11000)
       if (typeof error === "object" && error !== null && (error as { code?: number }).code === 11000) {
+        const keyPattern = (error as { keyPattern?: Record<string, unknown> }).keyPattern;
+        if (keyPattern && "idempotencyKey" in keyPattern) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: {
+                code: "DUPLICATE_REQUEST",
+                message: "A request with this idempotency key was already submitted",
+              },
+            },
+            { status: 409 }
+          );
+        }
         return NextResponse.json(
           {
             success: false,

@@ -1,8 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
-import { connectDB } from "@/lib/server/db";
-import { verifyJwt } from "@/lib/server/auth/jwt";
-import { User } from "@/lib/server/models/User";
+import { route } from "@/lib/server/handler";
 import { ApiError } from "@/lib/server/errors";
 import { ok } from "@/lib/server/http";
 import { env } from "@/lib/server/config/env";
@@ -24,22 +21,11 @@ if (
   });
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    await connectDB();
-
-    const authHeader = req.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw new ApiError(401, "UNAUTHENTICATED", "Authentication required");
-    }
-
-    const token = authHeader.substring(7);
-    const payload = verifyJwt(token);
-    const user = await User.findById(payload.sub);
-    if (!user || !user.isActive) {
-      throw new ApiError(401, "UNAUTHENTICATED", "Invalid or inactive account");
-    }
-
+export const POST = route(
+  {
+    auth: true,
+  },
+  async ({ req }) => {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
 
@@ -113,24 +99,5 @@ export async function POST(req: NextRequest) {
       },
       "File uploaded successfully (development fallback)"
     );
-  } catch (err: unknown) {
-    if (err instanceof ApiError) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: { code: err.code, message: err.message, details: err.details },
-        },
-        { status: err.status }
-      );
-    }
-
-    console.error("Upload error:", err);
-    return NextResponse.json(
-      {
-        success: false,
-        error: { code: "INTERNAL_ERROR", message: "Failed to upload file" },
-      },
-      { status: 500 }
-    );
   }
-}
+);

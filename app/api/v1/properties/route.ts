@@ -1,4 +1,4 @@
-import { FilterQuery } from "mongoose";
+import { FilterQuery, PipelineStage } from "mongoose";
 import { route } from "@/lib/server/handler";
 import { ok, paginate, listResult } from "@/lib/server/http";
 import { Property, IProperty, PropertyStatus } from "@/lib/server/models/Property";
@@ -49,6 +49,54 @@ export const GET = route(
       }
     }
 
+    if (query.minFunding !== undefined || query.maxFunding !== undefined) {
+      const minF = query.minFunding !== undefined ? parseFloat(query.minFunding) : 0;
+      const maxF = query.maxFunding !== undefined ? parseFloat(query.maxFunding) : 100;
+      const exprConditions: Record<string, unknown>[] = [];
+
+      if (query.minFunding !== undefined) {
+        exprConditions.push({
+          $gte: [
+            {
+              $multiply: [
+                {
+                  $divide: [
+                    "$unitsSold",
+                    { $cond: [{ $gt: ["$totalUnits", 0] }, "$totalUnits", 1] },
+                  ],
+                },
+                100,
+              ],
+            },
+            minF,
+          ],
+        });
+      }
+
+      if (query.maxFunding !== undefined) {
+        exprConditions.push({
+          $lte: [
+            {
+              $multiply: [
+                {
+                  $divide: [
+                    "$unitsSold",
+                    { $cond: [{ $gt: ["$totalUnits", 0] }, "$totalUnits", 1] },
+                  ],
+                },
+                100,
+              ],
+            },
+            maxF,
+          ],
+        });
+      }
+
+      if (exprConditions.length > 0) {
+        filter.$expr = (exprConditions.length === 1 ? exprConditions[0] : { $and: exprConditions }) as any;
+      }
+    }
+
     if (query.search) {
       const escapedSearch = query.search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       filter.$or = [
@@ -58,8 +106,11 @@ export const GET = route(
     }
 
     // Sort mapping
+    const isFundingSort = query.sort === "-fundingPct" || query.sort === "fundingPct";
+    const fundingSortDir: 1 | -1 = query.sort === "fundingPct" ? 1 : -1;
+
     let sortOptions: Record<string, 1 | -1> = { createdAt: -1 };
-    if (query.sort) {
+    if (query.sort && !isFundingSort) {
       switch (query.sort) {
         case "unitPrice":
         case "price":
@@ -78,10 +129,34 @@ export const GET = route(
       }
     }
 
-    const [rawItems, total] = await Promise.all([
-      Property.find(filter).sort(sortOptions).skip(skip).limit(limit),
-      Property.countDocuments(filter),
-    ]);
+    let rawItems: IProperty[];
+    let total: number;
+
+    if (isFundingSort) {
+      const pipeline: PipelineStage[] = [
+        { $match: filter },
+        {
+          $addFields: {
+            fundingRatio: {
+              $divide: ["$unitsSold", { $cond: [{ $gt: ["$totalUnits", 0] }, "$totalUnits", 1] }],
+            },
+          },
+        },
+        { $sort: { fundingRatio: fundingSortDir, createdAt: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+      ];
+
+      [rawItems, total] = await Promise.all([
+        Property.aggregate(pipeline).exec(),
+        Property.countDocuments(filter),
+      ]);
+    } else {
+      [rawItems, total] = await Promise.all([
+        Property.find(filter).sort(sortOptions).skip(skip).limit(limit),
+        Property.countDocuments(filter),
+      ]);
+    }
 
     // Batch enrich with broker names and investor counts
     const brokerIds = [...new Set(rawItems.map((p) => p.brokerId.toString()))];

@@ -78,8 +78,11 @@ async function runConcurrencyTest() {
   }
 
   // 3. Create or reset test property with EXACTLY 10 units left
-  await Property.deleteOne({ title: "Concurrency Proof Penthouse" });
-  await Investment.deleteMany({ propertyId: { $exists: true } });
+  const existingTestProperty = await Property.findOne({ title: "Concurrency Proof Penthouse" });
+  if (existingTestProperty) {
+    await Investment.deleteMany({ propertyId: existingTestProperty._id });
+    await Property.deleteOne({ _id: existingTestProperty._id });
+  }
 
   const valuation = 10000000; // ₹1,00,000 (in paise)
   const totalUnits = 100;
