@@ -37,7 +37,7 @@ export function LineAreaChart({
           <CartesianGrid vertical={false} stroke="#E5E7EB" />
           <XAxis dataKey={xKey} />
           <YAxis tickFormatter={format} width={90} />
-          <Tooltip formatter={(n: number) => format(n)} />
+          <Tooltip formatter={(n) => format(Number(n))} />
           <Area dataKey={yKey} stroke="#047857" fill="#D1FAE5" />
         </AreaChart>
       </ResponsiveContainer>
