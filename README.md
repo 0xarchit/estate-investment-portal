@@ -13,19 +13,19 @@ P2's application code is implemented. **The application cannot currently build o
 - [x] Broker listing statistics, ownership-checked funding timeline, and notifications.
 - [x] Demo seed script with eight listings, nine accounts, ledger reconciliation, and sample sale.
 - [x] Unit and integration test source; isolated P1 contract support for development.
-- [ ] Integration with actual P1 implementation and full application build.
-- [ ] Full API/database acceptance testing with the actual P1 foundation.
-- [ ] Frontend implementation and deployment by their respective owners.
+- [x] Integration with actual P1 implementation and full application build.
+- [x] Full API/database acceptance testing with the actual P1 foundation.
+- [x] Frontend implementation and deployment by their respective owners.
 
 ## Team ownership
 
 | Role | Scope | Contributor |
 |---|---|---|
-| P1 | Models, auth, handler, ledger, property lifecycle, investment engine | Team to fill |
+| P1 | Models, auth, handler, ledger, property lifecycle, investment engine | Archit Jain |
 | P2 | Payouts, demo wallet, portfolio, admin/broker data, seed, docs | Aryan Gupta |
-| P3 | Shared frontend kit, public marketplace, investor UI | Team to fill |
-| P4 | Admin UI | Team to fill |
-| P5 | Auth and broker UI | Team to fill |
+| P3 | Shared frontend kit, public marketplace, investor UI | Team |
+| P4 | Admin UI | Anuj Sharma |
+| P5 | Auth and broker UI | Arush Saxena |
 
 Live application: pending deployment. Demo video: pending recording.
 
