@@ -1,14 +1,17 @@
+import { loadEnvConfig } from "@next/env";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import { connectDB } from "../lib/server/db";
-import { User } from "../lib/server/models/User";
-import { Property } from "../lib/server/models/Property";
-import { Investment } from "../lib/server/models/Investment";
-import { Transaction } from "../lib/server/models/Transaction";
-import { invest } from "../lib/server/services/investment.service";
-import { ApiError } from "../lib/server/errors";
+
+loadEnvConfig(process.cwd());
 
 async function runConcurrencyTest() {
+  const { connectDB } = await import("../lib/server/db");
+  const { User } = await import("../lib/server/models/User");
+  const { Property } = await import("../lib/server/models/Property");
+  const { Investment } = await import("../lib/server/models/Investment");
+  const { invest } = await import("../lib/server/services/investment.service");
+  const { ApiError } = await import("../lib/server/errors");
+
   console.log("=================================================");
   console.log("🚀 STARTING CONCURRENCY PROOF TEST");
   console.log("=================================================");
