@@ -57,7 +57,7 @@ export function DonutChart({
                 <Cell key={d.name} fill={colors[i % colors.length]} />
               ))}
             </Pie>
-            <Tooltip formatter={(v: number) => formatINR(v)} />
+            <Tooltip formatter={(v) => formatINR(Number(v))} />
           </PieChart>
         </ResponsiveContainer>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">

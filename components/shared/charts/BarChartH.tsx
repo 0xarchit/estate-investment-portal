@@ -66,7 +66,7 @@ export function BarChartH({
               }
             />
             <Tooltip
-              formatter={(value: number) => [format(value), "Value"]}
+              formatter={(value) => [format(Number(value)), "Value"]}
               cursor={{ fill: "#F0F5FA" }}
             />
             <Bar

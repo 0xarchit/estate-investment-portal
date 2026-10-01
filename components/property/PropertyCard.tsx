@@ -5,10 +5,16 @@ import { formatINR, formatPct } from "@/lib/format";
 import { FundingBar } from "@/components/shared/FundingBar";
 import { StatusChip } from "@/components/shared/StatusChip";
 import { PropertyImage } from "./PropertyImage";
-export function PropertyCard({ property: p }: { property: Property }) {
+export function PropertyCard({
+  property: p,
+  basePath = "/properties",
+}: {
+  property: Property;
+  basePath?: string;
+}) {
   return (
     <article className="group overflow-hidden bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg transition-shadow">
-      <Link href={`/properties/${p._id}`} className="block">
+      <Link href={`${basePath}/${p._id}`} className="block">
         <div className="aspect-[16/10] relative overflow-hidden">
           <PropertyImage
             src={p.images?.[0]?.url}

@@ -46,7 +46,7 @@ export function route<TBody = unknown>(
   options: RouteOptions<TBody>,
   handler: (ctx: RouteContext<TBody>) => Promise<NextResponse>
 ) {
-  return async (req: NextRequest, { params = {} }: { params?: Record<string, string> } = {}) => {
+  return async (req: NextRequest, context?: { params?: Promise<unknown> }) => {
     try {
       await connectDB();
 
@@ -129,6 +129,7 @@ export function route<TBody = unknown>(
       }
 
       const query = parseQuery(req.nextUrl);
+      const params = (context?.params ? await context.params : {}) as Record<string, string>;
 
       return await handler({
         req,

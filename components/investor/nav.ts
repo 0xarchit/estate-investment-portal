@@ -10,7 +10,7 @@ import { NavItem } from "@/components/layout/DashboardLayout";
 
 export const investorNav: NavItem[] = [
   { label: "Dashboard", href: "/investor", icon: LayoutDashboard },
-  { label: "Marketplace", href: "/properties", icon: Store },
+  { label: "Marketplace", href: "/investor/marketplace", icon: Store },
   { label: "Portfolio", href: "/investor/portfolio", icon: Briefcase },
   { label: "Wallet", href: "/investor/wallet", icon: Wallet },
   { label: "KYC Verification", href: "/investor/kyc", icon: FileText },
