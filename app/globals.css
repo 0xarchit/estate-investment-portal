@@ -87,6 +87,8 @@
   }
   html {
     scroll-behavior: smooth;
+    scroll-padding-top: 6rem;
+    scrollbar-gutter: stable;
   }
 }
 @layer components {
@@ -144,6 +146,8 @@
   .modal {
     @apply w-full max-w-lg rounded-2xl border-0 bg-white p-6 text-foreground shadow-2xl;
     max-height: 90dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   .modal::backdrop {
     background: rgba(15, 42, 74, 0.6);
@@ -165,6 +169,33 @@
   }
   .skip-link {
     @apply fixed z-[100] left-4 top-4 -translate-y-24 focus:translate-y-0 bg-white text-navy rounded-lg p-3;
+  }
+}
+/* Keep transitions on interactive surfaces rather than animating page layout. */
+.btn, .btn-secondary, .btn-ghost, .btn-danger, .icon-button,
+.workspace-link, .login-role {
+  transition-property: color, background-color, border-color, box-shadow;
+  transition-duration: 180ms;
+  transition-timing-function: ease-out;
+}
+.workspace-popover {
+  max-height: calc(100dvh - 10rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.public-mobile-navigation {
+  max-height: calc(100dvh - 76px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+@keyframes surface-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .auth-card, .modal[open], details[open] > .workspace-popover,
+  .public-mobile-navigation {
+    animation: surface-enter 180ms ease-out both;
   }
 }
 @media (max-width: 640px) {

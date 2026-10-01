@@ -64,7 +64,7 @@ export function DashboardLayout({
           title={label}
           onClick={() => setMobile(false)}
           aria-current={active?.href === href ? "page" : undefined}
-          className={`flex gap-3 items-center px-4 py-3 rounded-lg text-sm ${active?.href === href ? "bg-emerald-800 text-white border-l-2 border-emerald-300" : "text-slate-300 hover:bg-white/10"}`}
+          className={`workspace-link flex gap-3 items-center px-4 py-3 rounded-lg text-sm ${active?.href === href ? "bg-emerald-800 text-white border-l-2 border-emerald-300" : "text-slate-300 hover:bg-white/10"}`}
         >
           {Icon && <Icon size={19} />}
           <span>{label}</span>
@@ -88,7 +88,7 @@ export function DashboardLayout({
         <p className="eyebrow text-slate-400 mb-5 mt-8 hidden lg:block">
           {roleLabel} workspace
         </p>
-        {navigation}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-5">{navigation}</div>
         <div className="mt-auto border-t border-white/15 pt-6 hidden lg:block">
           <Link
             href="/properties"
@@ -141,7 +141,7 @@ export function DashboardLayout({
                 </span>
               )}
             </summary>
-            <div className="absolute right-0 top-14 w-72 max-w-[85vw] panel shadow-xl z-40">
+            <div className="workspace-popover absolute right-0 top-14 w-72 max-w-[85vw] panel shadow-xl z-40">
               <h2 className="font-semibold mb-3">Notifications</h2>
               {notices.isError ? (
                 <p className="text-sm">Notifications are unavailable.</p>
@@ -198,7 +198,7 @@ export function DashboardLayout({
             >
               {user?.name?.charAt(0) ?? "A"}
             </summary>
-            <div className="absolute right-0 top-14 w-52 panel shadow-xl z-40 p-3">
+            <div className="workspace-popover absolute right-0 top-14 w-52 panel shadow-xl z-40 p-3">
               <p className="p-2 text-sm font-semibold truncate">{user?.name}</p>
               <Link href="/profile" className="flex gap-2 p-2 text-sm">
                 <UserRound size={16} /> Profile
@@ -250,7 +250,7 @@ export function DashboardLayout({
         title={`${roleLabel} workspace`}
         onClose={() => setMobile(false)}
       >
-        <div className="bg-navy p-3 rounded-xl">{navigation}</div>
+        <div className="max-h-[65dvh] overflow-y-auto overscroll-contain bg-navy p-3 rounded-xl">{navigation}</div>
       </Modal>
     </div>
   );

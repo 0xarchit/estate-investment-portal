@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { Building2, Menu, X, ArrowUpRight } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -23,9 +23,19 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const menuTrigger = useRef<HTMLButtonElement>(null);
   return (
     <>
-      <header className="sticky top-0 z-30 border-b bg-white">
+      <header
+        className="sticky top-0 z-30 border-b bg-white"
+        onKeyDown={(event) => {
+          if (event.key === "Escape" && open) {
+            event.preventDefault();
+            setOpen(false);
+            menuTrigger.current?.focus();
+          }
+        }}
+      >
         <div className="site-width h-[76px] flex items-center justify-between">
           <Brand />
           <nav
@@ -64,8 +74,10 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             )}
           </div>
           <button
+            ref={menuTrigger}
             className="icon-button md:hidden"
             aria-expanded={open}
+            aria-controls="public-mobile-navigation"
             aria-label={open ? "Close navigation" : "Open navigation"}
             onClick={() => setOpen(!open)}
           >
@@ -74,7 +86,8 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
         </div>
         {open && (
           <nav
-            className="p-5 border-t grid gap-2 md:hidden"
+            id="public-mobile-navigation"
+            className="public-mobile-navigation p-5 border-t grid gap-2 md:hidden"
             aria-label="Mobile navigation"
           >
             {[
