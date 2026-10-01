@@ -115,6 +115,7 @@ API adds computed: `fundingPct` (0–100, 2dp), `remainingUnits`, `investorCount
 **Payout** `{ _id, propertyId(unique), salePrice, platformFee, distributable, items:[{investorId, units, amount}], executedBy, executedAt }`
 **Withdrawal** `{ _id, userId, amount, status:'PENDING|APPROVED|REJECTED', bankDetails:{accountName, accountNumber(dummy), ifsc}, reason, processedBy, createdAt }`
 **Notification** `{ _id, userId, type, title, body, link, read=false, createdAt }`
+**GatewayOrder** `{ _id, orderId(unique), userId, amount(paise), status:'CREATED|PAID', paymentId, createdAt }` (P1 model, used only by P2's top-up)
 **Settings** (single doc) `{ platformFeePct=2, brokerCommissionPct=1, maxOwnershipPct=49 }`
 
 ## 6. Property status machine (P1 in `property.service.ts`, used by P2)

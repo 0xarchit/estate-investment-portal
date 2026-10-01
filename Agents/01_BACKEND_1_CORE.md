@@ -26,7 +26,7 @@ Anything under `components/`, `app/` pages, `lib/api/`, `lib/format.ts`, payout/
 
 ### Task 2 — DB + models (T+8 → T+15, PUSH)
 - `lib/server/db.ts`: cached Mongoose connection (global cache for hot reload).
-- Models exactly per **§5 of 00_TEAM_CONTEXT** (User, Property, Investment, Transaction, Payout, Withdrawal, Notification, Settings). `timestamps: true`. Indexes: `users.email` unique; `properties` on `status, city, brokerId`; `investments` compound `{investorId, propertyId}`, `idempotencyKey` unique sparse; `transactions` `{userId, createdAt}`, `gatewayPaymentId` unique sparse; `payouts.propertyId` unique.
+- Models exactly per **§5 of 00_TEAM_CONTEXT** (User, Property, Investment, Transaction, Payout, Withdrawal, Notification, Settings, plus **GatewayOrder** `{ orderId unique, userId, amount, status:'CREATED|PAID', paymentId }` used by P2's mock top-up). `timestamps: true`. Indexes: `users.email` unique; `properties` on `status, city, brokerId`; `investments` compound `{investorId, propertyId}`, `idempotencyKey` unique sparse; `transactions` `{userId, createdAt}`, `gatewayPaymentId` unique sparse; `payouts.propertyId` unique.
 - Property schema validation: `valuation % totalUnits === 0`, `minUnits ≤ totalUnits`, money fields are integers (`Number.isInteger`).
 
 ### Task 3 — Helpers (T+10 → T+20, PUSH)
