@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
   MapPin,
@@ -25,16 +26,17 @@ import {
 import { getProperty } from "@/lib/api/properties";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { formatINR, formatPct } from "@/lib/format";
-export default function PropertyDetail({ params }: { params: { id: string } }) {
+export default function PropertyDetail() {
+  const { id } = useParams<{ id: string }>();
   const { user, loading: authLoading } = useAuth();
   const query = useQuery({
-    queryKey: ["property", params.id],
-    queryFn: () => getProperty(params.id),
+    queryKey: ["property", id],
+    queryFn: () => getProperty(id),
   });
   const p = query.data;
   const error = query.error as { status?: number } | null;
   let cta = "Invest in this property";
-  let href = `/investor/invest/${params.id}`;
+  let href = `/investor/invest/${id}`;
   let blocked = false;
   let reason = "";
   if (authLoading) {
