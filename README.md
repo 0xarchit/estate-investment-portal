@@ -1,78 +1,82 @@
-# Fractional Real Estate Investment Portal
+<p align="center">
+  <img src="assets/logo.svg" alt="EstatePortal" width="120" height="120" />
+</p>
 
-Academic fractional-property investment portal using Next.js App Router, TypeScript, MongoDB/Mongoose, Zod, JWT authentication, and a ledger-backed demo wallet. All amounts are integer paise.
+<h1 align="center">EstatePortal</h1>
 
-## Implementation status
+<p align="center">Fractional Real Estate Investment Platform</p>
 
-The shared P1 foundation and team frontend are integrated. P2 provides ledger-backed demo payments, payouts, portfolio reporting, and admin/broker APIs. The latest integration pass corrects broker serialization, stored-order validation, preview side effects, purchase-date returns, and financial request validation.
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white" alt="Next.js 16" />
+  <img src="https://img.shields.io/badge/React-19-087EA4?logo=react&logoColor=white" alt="React 19" />
+  <img src="https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white" alt="TypeScript 6" />
+  <img src="https://img.shields.io/badge/MongoDB-Mongoose%208-47A248?logo=mongodb&logoColor=white" alt="MongoDB" />
+  <img src="https://img.shields.io/badge/Tailwind%20CSS-3-06B6D4?logo=tailwindcss&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/License-MIT-D4A017" alt="MIT License" />
+</p>
 
-- [x] Integer payout calculator, preview, transactional sale, investor payouts, and platform fee credit.
-- [x] Demo top-up orders and verification, replay protection, wallet reads, and withdrawal approvals.
-- [x] Portfolio holdings, estimates, summary, and transaction history.
-- [x] Admin statistics, users, settings, KYC, and withdrawals.
-- [x] Broker listing statistics, ownership-checked funding timeline, and notifications.
-- [x] Demo seed script with eight listings, nine accounts, ledger reconciliation, and sample sale.
-- [x] Unit/route regressions and real replica-set acceptance tests.
-- [x] Integration with actual P1 implementation and full application build.
-- [x] P2 database acceptance tests against the actual P1 foundation (16 passing checks).
-- [x] Investor, broker, and admin frontend workspaces; explicit role selection at sign-in.
-- [x] Accessible login feedback, safe workspace redirects, subtle motion, and bounded scrolling.
-- [ ] Deployment and end-to-end verification in the deployed environment.
+EstatePortal is an academic demo of a fractional property-investment portal. Investors buy integer unit shares of listed properties, brokers list and track funding, and admins run due diligence and settlements. Every balance change flows through an auditable, ledger-backed demo wallet. All amounts are stored as integer paise.
 
-## Team ownership
+> Academic project. No real money or securities are involved.
 
-| Role | Scope | Contributor |
-|---|---|---|
-| P1 | Models, auth, handler, ledger, property lifecycle, investment engine | Archit Jain |
-| P2 | Payouts, demo wallet, portfolio, admin/broker data, seed, docs | Aryan Gupta |
-| P3 | Shared frontend kit, public marketplace, investor UI | Team |
-| P4 | Admin UI | Anuj Sharma |
-| P5 | Auth and broker UI | Arush Saxena |
+## Features
 
-Live application: pending deployment. Demo video: pending recording.
+### Investor
+- Browse the marketplace and open a property with live funding progress.
+- Buy fractional units and top up a demo wallet.
+- Track holdings, estimated appreciation, summary ROI, and full transaction history.
+- Request withdrawals against a simulated bank settlement.
+
+### Broker
+- List properties and follow an ownership-checked funding timeline.
+- Earn commission when a listing is fully funded.
+- Read listing statistics and notifications.
+
+### Admin
+- View platform statistics and manage users.
+- Review KYC submissions and approve or reject withdrawals.
+- Adjust platform settings.
+
+### Platform
+- The ledger is the only component that moves wallet balances, and every financial transaction shares one Mongo session.
+- Oversell is blocked by a conditional unit update; payments are idempotent and replays return `409 DUPLICATE_PAYMENT`.
+- Sales and payouts use BigInt math with a conservation check, plus a platform fee credit.
+- Each API route declares its roles and request schema through a shared `route()` wrapper backed by JWT auth and Zod validation.
+
+## Tech stack
+
+Next.js 16 (App Router), React 19, TypeScript 6, MongoDB with Mongoose 8, Zod, JWT, Tailwind CSS 3, TanStack Query, Recharts, and Framer Motion.
 
 ## Architecture
-
-Each API route declares its permitted roles and request schema through P1's shared `route()` wrapper. P2 services read the shared Mongoose models and pass the same Mongo session to every ledger and notification operation belonging to a financial transaction. The ledger is the only component that changes wallet balances.
 
 ```mermaid
 flowchart LR
   UI[Investor / Broker / Admin UI] --> API[Next.js API routes]
-  API --> Guard[P1 authentication + validation]
-  Guard --> P2[P2 wallet / payout / portfolio / stats]
-  P2 --> Ledger[P1 ledger]
-  P2 --> DB[(MongoDB replica set)]
+  API --> Guard[Authentication + validation]
+  Guard --> Svc[Wallet / payout / portfolio / stats]
+  Svc --> Ledger[Ledger]
+  Svc --> DB[(MongoDB replica set)]
   Ledger --> DB
-  P2 --> Demo[Local demo payment adapter: true]
+  Svc --> Demo[Local demo payment adapter]
 ```
 
-## Local setup
+Services read shared Mongoose models and pass the same session to every ledger and notification write inside a transaction. The demo payment adapter performs no external calls.
 
-Requires Node.js 20+ and MongoDB Atlas or a local replica set. Standalone MongoDB does not support the required multi-document transactions.
+## Quick start
 
-```powershell
+Requires Node.js 20+ and MongoDB Atlas or a local replica set. Standalone MongoDB does not support the multi-document transactions this project relies on.
+
+```bash
 npm ci
-Copy-Item .env.example .env
-# Set MONGODB_URI, JWT_SECRET, and MOCK_GATEWAY_SECRET in .env.
-# Use a dedicated demo database: the seed command clears its application collections.
+cp .env.example .env   # PowerShell: Copy-Item .env.example .env
+# Set MONGODB_URI, JWT_SECRET, and MOCK_GATEWAY_SECRET in .env
 npm run seed -- --reset-demo
 npm run dev
 ```
 
-The seed resets only the application's nine model collections, initializes indexes, funds wallets through the ledger, inserts investments, pays broker commissions for fully funded properties, and executes a sample sale. Re-running it recreates the same demo dataset. The explicit `--reset-demo` flag prevents an accidental reset.
+The seed resets only the application collections, builds indexes, funds wallets through the ledger, inserts investments, pays broker commissions on fully funded properties, and runs a sample sale. The explicit `--reset-demo` flag guards against an accidental reset.
 
-## Demo payments
-
-`demoRazorpayRequest()` always resolves to `true`. It performs no external requests and ignores any real provider credentials. A top-up is credited only after a valid, owned demo order and its generated HMAC are verified. The PAID marker and wallet credit commit together; replay returns `409 DUPLICATE_PAYMENT`.
-
-1. Call `POST /api/v1/wallet/topup/order` with `{ "amount": 10000 }` (₹100).
-2. Copy `orderId`, `mockPayment.paymentId`, and `mockPayment.signature` from its response.
-3. Send those fields to `POST /api/v1/wallet/topup/verify`.
-4. The response contains `{ "balance": 10000, "mock": true, "paymentSuccess": true }` for an initially empty wallet, inside the standard success envelope.
-
-Withdrawals also simulate bank settlement. Approval debits the demo wallet, while rejection does not move money.
-
-## Seed credentials
+## Demo accounts
 
 | Email | Password | Role / state |
 |---|---|---|
@@ -86,27 +90,50 @@ Withdrawals also simulate bank settlement. Approval debits the demo wallet, whil
 | vikram@demo.com | Investor@123 | Investor, approved KYC |
 | fresh@demo.com | Investor@123 | Empty wallet, no KYC submitted |
 
-## Documentation and checks
+Choose Investor, Broker, or Admin at sign-in. The selected role must match the stored account; it never grants permissions.
+
+## Demo payments
+
+`demoRazorpayRequest()` always resolves to `true`, makes no external request, and ignores real provider credentials. A top-up is credited only after a valid, owned demo order and its generated HMAC are verified.
+
+1. `POST /api/v1/wallet/topup/order` with `{ "amount": 10000 }` (Rs 100).
+2. Copy `orderId`, `mockPayment.paymentId`, and `mockPayment.signature` from the response.
+3. Send those fields to `POST /api/v1/wallet/topup/verify`.
+4. For an initially empty wallet the response contains `{ "balance": 10000, "mock": true, "paymentSuccess": true }`.
+
+Withdrawals simulate bank settlement: approval debits the demo wallet, rejection does not move money.
+
+## Scripts
+
+| Command | Purpose |
+|---|---|
+| `npm run dev` | Start the development server |
+| `npm run build` | Production build |
+| `npm start` | Serve the production build |
+| `npm run lint` | Lint the project |
+| `npm run seed -- --reset-demo` | Reset and seed the demo dataset |
+| `npm test` | Run the unit and route suite |
+| `npm run concurrency` | Run the concurrency check against a replica set |
+
+## Testing
+
+The unit and route suite has 83 passing checks via `npm test`. A separate real-database configuration covers 16 transaction acceptance checks against an actual replica set; setup and the disposable-database restriction are documented in the testing guide. Also run `node node_modules/typescript/bin/tsc --noEmit --incremental false` and `npm run build`.
+
+## How returns are calculated
+
+Appreciation is computed per purchase, starting at the later of the purchase date and the property funding date, and capped at the holding period. It is an illustrative estimate. Refunded holdings are excluded from invested principal and current value in summary ROI; sold holdings use actual recorded payout amounts. Daily statistics use UTC calendar days. Pending withdrawals do not reserve funds; approval rechecks the available balance.
+
+## Documentation
 
 - [API reference](docs/API.md)
+- [Testing guide](docs/testing/README.md)
 - [P1 integration requirements](docs/P1_INTEGRATION.md)
-- [P2 file inventory and implementation status](docs/P2_IMPLEMENTATION.md)
-- [Testing instructions and limitations](docs/testing/README.md)
+- [P2 implementation notes](docs/P2_IMPLEMENTATION.md)
 
-Run `npm test`, `node node_modules/typescript/bin/tsc --noEmit --incremental false`, and `npm run build`. The unit/route suite has 83 passing checks. Run the separate real database configuration for the 16 transaction acceptance checks; setup and the disposable-database restriction are documented in the testing guide.
+## Contributing
 
-Portfolio appreciation is calculated separately for each purchase, starting at the later of its purchase date and the property funding date, and capped at the property's holding period. It is an illustrative estimate. Refunded holdings are excluded from both invested principal and current value in summary ROI. Sold holdings use actual recorded payout amounts. Daily statistics use UTC calendar days. Pending withdrawal requests do not reserve funds; approval rechecks available balance.
+See [CONTRIBUTING](.github/CONTRIBUTING.md) and the [code of conduct](.github/CODE_OF_CONDUCT.md). Report vulnerabilities privately through the [security policy](.github/SECURITY.md).
 
-This is an academic project. No real money or securities are involved.
+## License
 
-## Sign-in and navigation
-
-Choose **Investor**, **Broker**, or **Admin** before signing in. The selected role must match the account stored in the database; it never grants permissions. Demo credential buttons fill both the credentials and the matching role. Existing API clients may omit the optional role field.
-
-After sign-in, safe internal destinations are retained, while external URLs and another role's workspace fall back to the account's home. Keyboard users can use native role radios, associated field labels, inline errors, and the skip link. Menus and notification lists scroll within the viewport. Subtle entrance and control transitions respect reduced-motion preferences.
-
-## Contributing without conflicts
-
-Keep feature branches aligned with the current remote before starting work, and stage only files assigned to the feature. P2 backend corrections stay within its services, validators, and routes. The explicit sign-in and scrolling request additionally touches shared auth and layout files; coordinate those files with P3/P5 before merging. The architecture diagram above is unchanged.
-
-GitHub attributes commits through the commit author email. If a contribution is missing, check `git log --format="%h %an <%ae>"` and verify that email on your GitHub account before making further commits. Adding an old email can associate historical commits without rewriting team history. See [GitHub contribution troubleshooting](https://docs.github.com/en/account-and-profile/how-tos/contribution-settings/troubleshooting-missing-contributions).
+Released under the [MIT License](LICENSE).
