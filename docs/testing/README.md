@@ -12,7 +12,7 @@ node node_modules/typescript/bin/tsc --noEmit --incremental false
 npm run build
 ```
 
-The suite currently has 83 passing unit/route tests. The 16 database tests skip when `P2_TEST_MONGODB_URI` is absent. A skip is not database validation: run the dedicated configuration below separately.
+Verified on 2026-10-01: TypeScript and the production build passed. The suite currently has 83 passing unit/route tests. The 16 database tests skip when `P2_TEST_MONGODB_URI` is absent. A skip is not database validation: run the dedicated configuration below separately.
 
 Coverage includes integer payout conservation and rounding, demo HMAC verification, stored order limits, wallet overflow, read-only preview, broker serialization and string ledger references, per-purchase appreciation, empty-body validation, property transaction filtering, role selection, and safe login redirects. Service unit tests isolate database calls; they do not establish transactional correctness by themselves.
 
@@ -62,3 +62,9 @@ Use a dedicated demo database configured through `.env`. The seed requires the e
 ## Legacy isolated configuration
 
 `vitest.config.ts`, `tsconfig.json`, and `p1-contract-double.ts` in this directory describe the pre-integration fixture. They are not the acceptance configuration for the integrated application. Application routes never import this fixture.
+
+## UI verification result and limits
+
+On 2026-10-01 the scoped UI pass verified all three demo role logins, wrong-role rejection, keyboard radio selection, cross-role redirect fallback, mobile navigation Escape/focus return, and the corrected skip-link target. Login was visually inspected at 1440px, 768px, and 375px. Reduced-motion behavior was checked in CSS; OS-level motion emulation was unavailable.
+
+Existing items outside this pass: large investor dashboard currency values wrap mid-number on narrow screens; broker logout is reachable through shared Notifications navigation but lacks a direct broker-layout control. These owner-specific screens were left unchanged. The repository has no ESLint configuration, so a standalone lint run is not a completed check.
